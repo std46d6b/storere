@@ -2,11 +2,11 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: storere
-      POSTGRES_USER: storere
-      POSTGRES_PASSWORD: storere_dev_only
+      POSTGRES_DB: ${POSTGRES_DB:-storere}
+      POSTGRES_USER: ${POSTGRES_USER:-storere}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-storere_dev_only}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U storere -d storere"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-storere} -d ${POSTGRES_DB:-storere}"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -15,19 +15,25 @@ services:
     image: quay.io/minio/minio:latest
     command: server /data --console-address :9001
     environment:
-      MINIO_ROOT_USER: storere
-      MINIO_ROOT_PASSWORD: change-this-minio-password
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-storere}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-this-minio-password}
     volumes: [minio_data:/data]
   migrate:
     image: migrate/migrate:v4.18.3
     volumes: [./backend/migrations:/migrations:ro]
-    command: ["-path=/migrations", "-database=postgres://storere:storere_dev_only@postgres:5432/storere?sslmode=disable", "up"]
+    command: ["-path=/migrations", "-database=postgres://${POSTGRES_USER:-storere}:${POSTGRES_PASSWORD:-storere_dev_only}@postgres:5432/${POSTGRES_DB:-storere}?sslmode=disable", "up"]
     depends_on: { postgres: { condition: service_healthy } }
   api:
     build: ./backend
     environment:
-      DATABASE_URL: postgres://storere:storere_dev_only@postgres:5432/storere?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-storere}:${POSTGRES_PASSWORD:-storere_dev_only}@postgres:5432/${POSTGRES_DB:-storere}?sslmode=disable
       COOKIE_SECURE: "false"
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-storere}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-change-this-minio-password}
+      MINIO_BUCKET: storere
+      MINIO_USE_SSL: "false"
+      MAX_UPLOAD_BYTES: "15728640"
     depends_on: { migrate: { condition: service_completed_successfully } }
   web:
     build: { context: ., dockerfile: frontend/Dockerfile }
