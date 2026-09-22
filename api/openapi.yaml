@@ -1,0 +1,80 @@
+openapi: 3.1.0
+info:
+  title: Storere API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+components:
+  securitySchemes:
+    cookieAuth: { type: apiKey, in: cookie, name: session }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        fieldErrors: { type: object, additionalProperties: { type: string } }
+    User:
+      type: object
+      required: [id, username, displayName]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        status: { type: string }
+    Space:
+      type: object
+      required: [id, name, role]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        address: { type: string }
+        role: { type: string, enum: [owner, admin, editor, viewer] }
+    Media:
+      type: object
+      required: [id, contentType, byteSize, url]
+      properties:
+        id: { type: string, format: uuid }
+        contentType: { type: string, example: image/webp }
+        byteSize: { type: integer, format: int64 }
+        url: { type: string, pattern: '^/api/v1/media/[0-9a-f-]{36}$' }
+    Item:
+      type: object
+      required: [id, name, state, photoCount]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        boxId: { type: [string, 'null'], format: uuid }
+        state: { type: string, enum: [active, temporarily_unavailable, archived] }
+        photoCount: { type: integer }
+        coverMedia: { anyOf: [{ $ref: '#/components/schemas/Media' }, { type: 'null' }] }
+paths:
+  /auth/register:
+    post:
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [username, displayName, password], properties: { username: { type: string }, displayName: { type: string }, password: { type: string, minLength: 12 } } } } } }
+      responses: { '201': { description: Registered }, '400': { description: Invalid input, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }, '403': { description: Registration disabled } }
+  /auth/login:
+    post: { responses: { '200': { description: Logged in }, '401': { description: Invalid credentials } } }
+  /auth/logout:
+    post: { security: [{ cookieAuth: [] }], responses: { '204': { description: Logged out } } }
+  /auth/me:
+    get: { security: [{ cookieAuth: [] }], responses: { '200': { description: Current user, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }, '401': { description: Unauthorized } } }
+  /spaces:
+    get: { security: [{ cookieAuth: [] }], responses: { '200': { description: Spaces, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Space' } } } } } } }
+    post: { security: [{ cookieAuth: [] }], responses: { '201': { description: Created } } }
+  /spaces/{spaceID}/items:
+    parameters: [{ name: spaceID, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { security: [{ cookieAuth: [] }], responses: { '200': { description: Items, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Item' } } } } } } }
+    post: { security: [{ cookieAuth: [] }], responses: { '201': { description: Created } } }
+  /media:
+    post:
+      security: [{ cookieAuth: [] }]
+      requestBody: { required: true, content: { multipart/form-data: { schema: { type: object, required: [spaceId, file], properties: { spaceId: { type: string, format: uuid }, file: { type: string, format: binary } } } } } }
+      responses: { '201': { description: Uploaded, content: { application/json: { schema: { $ref: '#/components/schemas/Media' } } } }, '400': { description: Invalid image }, '403': { description: Forbidden } }
+  /media/{mediaID}:
+    parameters: [{ name: mediaID, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { security: [{ cookieAuth: [] }], responses: { '200': { description: Private image bytes }, '401': { description: Unauthorized }, '403': { description: Forbidden }, '404': { description: Missing } } }
+    delete: { security: [{ cookieAuth: [] }], responses: { '204': { description: Deleted } } }

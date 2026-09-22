@@ -28,6 +28,10 @@ type user struct { ID, Username, DisplayName string }
 
 func NewServer(db *pgxpool.Pool, registrationEnabled bool) http.Handler {
 	s := &server{db: db, registrationEnabled: registrationEnabled, secureCookies: os.Getenv("COOKIE_SECURE") != "false"}
+	return s.router()
+}
+
+func (s *server) router() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.health)
 	mux.HandleFunc("POST /api/v1/auth/register", s.register)
@@ -45,6 +49,7 @@ func NewServer(db *pgxpool.Pool, registrationEnabled bool) http.Handler {
 	mux.Handle("POST /api/v1/spaces/{spaceID}/items", s.auth(http.HandlerFunc(s.createItem)))
 	mux.Handle("GET /api/v1/spaces/{spaceID}/search", s.auth(http.HandlerFunc(s.search)))
 	mux.Handle("GET /api/v1/{entity}/{id}/timeline", s.auth(http.HandlerFunc(s.timeline)))
+	mux.Handle("GET /api/v1/media/{mediaID}", s.auth(http.HandlerFunc(s.getMedia)))
 	return security(mux)
 }
 func main() {
@@ -55,6 +60,7 @@ func main() {
 	if err := http.ListenAndServe(addr, NewServer(db, enabled)); err != nil { slog.Error("server", "error", err) }
 }
 func (s *server) health(w http.ResponseWriter, _ *http.Request) { respond(w, http.StatusOK, map[string]string{"status":"ok"}) }
+func (s *server) getMedia(w http.ResponseWriter, r *http.Request) { fail(w, http.StatusNotImplemented, "media_not_configured", "Media storage is not configured") }
 func (s *server) register(w http.ResponseWriter, r *http.Request) {
 	if !s.registrationEnabled { fail(w,http.StatusForbidden,"registration_disabled","Registration is disabled"); return }; if s.db==nil { fail(w,500,"database_unavailable","Database unavailable"); return }
 	var in struct{ Username, DisplayName, Password string }; if !decode(r,&in) || len(strings.TrimSpace(in.Username))<3 || len(in.Password)<12 { fail(w,400,"invalid_input","Username (3+) and password (12+) are required"); return }
