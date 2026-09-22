@@ -607,6 +607,19 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 }
 func (s *server) timeline(w http.ResponseWriter, r *http.Request) {
 	entity, id := r.PathValue("entity"), r.PathValue("id")
+	if !map[string]bool{"space": true, "location": true, "box": true, "item": true, "media": true}[entity] {
+		fail(w, http.StatusNotFound, "not_found", "Timeline not found")
+		return
+	}
+	var spaceID string
+	if s.db.QueryRow(r.Context(), "select storage_space_id from audit_events where entity_type=$1 and entity_id=$2::uuid limit 1", entity, id).Scan(&spaceID) != nil {
+		fail(w, http.StatusNotFound, "not_found", "Timeline not found")
+		return
+	}
+	if !s.can(r, spaceID, "viewer") {
+		fail(w, http.StatusForbidden, "forbidden", "No access")
+		return
+	}
 	rows, e := s.db.Query(r.Context(), "select action,payload,occurred_at from audit_events where entity_type=$1 and entity_id=$2::uuid order by occurred_at desc", entity, id)
 	if e != nil {
 		fail(w, 400, "query_failed", "Timeline unavailable")
