@@ -32,6 +32,6 @@ services:
     depends_on: { migrate: { condition: service_completed_successfully } }
   web:
     build: { context: ., dockerfile: frontend/Dockerfile }
-    ports: ["18080:80"]
+    ports: ["8000:80"]
     depends_on: [api]
 volumes: { postgres_data: {}, minio_data: {} }
