@@ -72,6 +72,12 @@ func (s *server) router() http.Handler {
 	mux.Handle("PATCH /api/v1/boxes/{boxID}/move", s.auth(http.HandlerFunc(s.moveBox)))
 	mux.Handle("GET /api/v1/spaces/{spaceID}/items", s.auth(http.HandlerFunc(s.items)))
 	mux.Handle("POST /api/v1/spaces/{spaceID}/items", s.auth(http.HandlerFunc(s.createItem)))
+	mux.Handle("PATCH /api/v1/items/{itemID}", s.auth(http.HandlerFunc(s.patchItem)))
+	mux.Handle("DELETE /api/v1/items/{itemID}", s.auth(http.HandlerFunc(s.deleteItem)))
+	mux.Handle("PATCH /api/v1/boxes/{boxID}", s.auth(http.HandlerFunc(s.patchBox)))
+	mux.Handle("DELETE /api/v1/boxes/{boxID}", s.auth(http.HandlerFunc(s.deleteBox)))
+	mux.Handle("PATCH /api/v1/locations/{locationID}", s.auth(http.HandlerFunc(s.patchLocation)))
+	mux.Handle("DELETE /api/v1/locations/{locationID}", s.auth(http.HandlerFunc(s.deleteLocation)))
 	mux.Handle("GET /api/v1/spaces/{spaceID}/search", s.auth(http.HandlerFunc(s.search)))
 	mux.Handle("GET /api/v1/{entity}/{id}/timeline", s.auth(http.HandlerFunc(s.timeline)))
 	mux.Handle("POST /api/v1/media", s.auth(http.HandlerFunc(s.uploadMedia)))
@@ -503,6 +509,76 @@ func (s *server) createItem(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = tx.Commit(r.Context())
 	respond(w, 201, map[string]string{"id": id, "name": in.Name})
+}
+
+func (s *server) patchItem(w http.ResponseWriter, r *http.Request) {
+	s.updateEntity(w, r, "items", "item", "itemID")
+}
+func (s *server) deleteItem(w http.ResponseWriter, r *http.Request) {
+	s.archiveEntity(w, r, "items", "item", "itemID")
+}
+func (s *server) patchBox(w http.ResponseWriter, r *http.Request) {
+	s.updateEntity(w, r, "boxes", "box", "boxID")
+}
+func (s *server) deleteBox(w http.ResponseWriter, r *http.Request) {
+	s.archiveEntity(w, r, "boxes", "box", "boxID")
+}
+func (s *server) patchLocation(w http.ResponseWriter, r *http.Request) {
+	s.updateEntity(w, r, "locations", "location", "locationID")
+}
+func (s *server) deleteLocation(w http.ResponseWriter, r *http.Request) {
+	s.archiveEntity(w, r, "locations", "location", "locationID")
+}
+
+func (s *server) updateEntity(w http.ResponseWriter, r *http.Request, table, entity, idParam string) {
+	id, spaceID, ok := s.editableEntity(r, table, idParam)
+	if !ok {
+		fail(w, http.StatusNotFound, "not_found", "Resource not found")
+		return
+	}
+	if !s.can(r, spaceID, "editor") {
+		fail(w, http.StatusForbidden, "forbidden", "No edit access")
+		return
+	}
+	var in struct{ Name, Description, State *string }
+	if !decode(r, &in) || (in.Name != nil && strings.TrimSpace(*in.Name) == "") {
+		fail(w, http.StatusBadRequest, "invalid_input", "Invalid update")
+		return
+	}
+	_, err := s.db.Exec(r.Context(), "update "+table+" set name=coalesce($1,name),description=coalesce($2,description),state=coalesce($3,state),updated_at=now() where id=$4", in.Name, in.Description, in.State, id)
+	if err != nil {
+		fail(w, http.StatusBadRequest, "update_failed", "Could not update resource")
+		return
+	}
+	s.audit(r, spaceID, entity, id, "updated", map[string]any{"name": in.Name, "description": in.Description, "state": in.State})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) archiveEntity(w http.ResponseWriter, r *http.Request, table, entity, idParam string) {
+	id, spaceID, ok := s.editableEntity(r, table, idParam)
+	if !ok {
+		fail(w, http.StatusNotFound, "not_found", "Resource not found")
+		return
+	}
+	if !s.can(r, spaceID, "editor") {
+		fail(w, http.StatusForbidden, "forbidden", "No edit access")
+		return
+	}
+	if _, err := s.db.Exec(r.Context(), "update "+table+" set deleted_at=now(),updated_at=now() where id=$1", id); err != nil {
+		fail(w, 500, "archive_failed", "Could not archive resource")
+		return
+	}
+	s.audit(r, spaceID, entity, id, "archived", map[string]any{})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) editableEntity(r *http.Request, table, idParam string) (string, string, bool) {
+	id := r.PathValue(idParam)
+	var spaceID string
+	if s.db.QueryRow(r.Context(), "select storage_space_id from "+table+" where id=$1 and deleted_at is null", id).Scan(&spaceID) != nil {
+		return "", "", false
+	}
+	return id, spaceID, true
 }
 func (s *server) search(w http.ResponseWriter, r *http.Request) {
 	space, q := r.PathValue("spaceID"), strings.TrimSpace(r.URL.Query().Get("q"))
