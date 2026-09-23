@@ -1,0 +1,103 @@
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f4f4f5;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(104, 92, 255, .18), transparent 28rem),
+    radial-gradient(circle at 88% 90%, rgba(46, 171, 116, .11), transparent 24rem),
+    #111214;
+}
+
+.auth-card,
+.setup {
+  width: min(100%, 430px);
+  padding: 32px;
+  border: 1px solid #303136;
+  border-radius: 16px;
+  background: rgba(27, 28, 31, .94);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+}
+
+.brand {
+  display: block;
+  margin-bottom: 44px;
+  color: #fff;
+  font-size: 20px;
+  letter-spacing: -.7px;
+}
+
+.auth-card h1,
+.setup h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  letter-spacing: -1px;
+}
+
+.auth-card form,
+.setup form,
+.dialog form {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.auth-card label,
+.setup label,
+.dialog label {
+  display: grid;
+  gap: 7px;
+  color: #d7d7da;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.auth-card input,
+.auth-card textarea,
+.auth-card select,
+.setup input,
+.setup textarea,
+.setup select,
+.dialog input,
+.dialog textarea,
+.dialog select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #393a40;
+  border-radius: 8px;
+  outline: none;
+  color: inherit;
+  background: #202125;
+  font: inherit;
+}
+
+.auth-card textarea,
+.setup textarea,
+.dialog textarea { min-height: 76px; resize: vertical; }
+.auth-card input:focus,
+.auth-card textarea:focus,
+.auth-card select:focus,
+.setup input:focus,
+.setup textarea:focus,
+.setup select:focus,
+.dialog input:focus,
+.dialog textarea:focus,
+.dialog select:focus { border-color: #8e89ff; box-shadow: 0 0 0 3px rgba(142, 137, 255, .18); }
+
+.muted { color: #999ba3; }
+.wide { width: 100%; justify-content: center; text-align: center; }
+.link-button { padding: 8px 0; color: #bcb9ff; font-size: 13px; }
+.form-error { margin: 0; color: #ffaaa5; font-size: 13px; }
+.upload-preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; border: 1px solid #393a40; }
+.space-switcher { display: grid; gap: 7px; padding: 0 10px; color: #999ba3; font-size: 11px; }
+.space-switcher select { width: 100%; padding: 7px; border: 1px solid #303136; border-radius: 7px; color: inherit; background: #202125; }
+
+@media (max-width: 700px) {
+  .app { grid-template-columns: 1fr; }
+  aside { min-height: auto; border-right: 0; border-bottom: 1px solid #292a2e; }
+  aside nav { grid-template-columns: repeat(3, 1fr); }
+  .content { padding: 28px 20px 88px; }
+  .auth-card, .setup { padding: 24px; }
+}
