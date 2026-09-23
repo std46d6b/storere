@@ -32,6 +32,7 @@ export const api = createApi({
     createBox: build.mutation<Box, { spaceId: string; name: string; description?: string; locationId?: string }>({ query: ({ spaceId, ...body }) => ({ url: `spaces/${spaceId}/boxes`, method: 'POST', body }), invalidatesTags: ['Box'] }),
     createItem: build.mutation<Item, { spaceId: string; name: string; description?: string; boxId?: string; mediaIds: string[] }>({ query: ({ spaceId, ...body }) => ({ url: `spaces/${spaceId}/items`, method: 'POST', body }), invalidatesTags: ['Item', 'Box'] }),
     updateItem: build.mutation<void, { id: string; name?: string; description?: string; state?: string }>({ query: ({ id, ...body }) => ({ url: `items/${id}`, method: 'PATCH', body }), invalidatesTags: ['Item'] }),
+    replaceItemMedia: build.mutation<void, { id: string; mediaId: string }>({ query: ({ id, ...body }) => ({ url: `items/${id}/media`, method: 'PATCH', body }), invalidatesTags: ['Item', 'Media'] }),
     updateBox: build.mutation<void, { id: string; name?: string; description?: string; state?: string }>({ query: ({ id, ...body }) => ({ url: `boxes/${id}`, method: 'PATCH', body }), invalidatesTags: ['Box'] }),
     updateLocation: build.mutation<void, { id: string; name?: string; description?: string; state?: string }>({ query: ({ id, ...body }) => ({ url: `locations/${id}`, method: 'PATCH', body }), invalidatesTags: ['Location'] }),
     moveBox: build.mutation<void, { id: string; locationId: string; temporary?: boolean }>({ query: ({ id, ...body }) => ({ url: `boxes/${id}/move`, method: 'PATCH', body }), invalidatesTags: ['Box'] }),
@@ -52,6 +53,6 @@ export const {
   useMeQuery, useLoginMutation, useRegisterMutation, useLogoutMutation,
   useSpacesQuery, useCreateSpaceMutation, useItemsQuery, useSearchQuery,
   useBoxesQuery, useLocationsQuery, useCreateLocationMutation, useCreateBoxMutation,
-  useCreateItemMutation, useUpdateItemMutation, useUpdateBoxMutation, useUpdateLocationMutation,
+  useCreateItemMutation, useUpdateItemMutation, useReplaceItemMediaMutation, useUpdateBoxMutation, useUpdateLocationMutation,
   useMoveBoxMutation, useTimelineQuery, useUploadMediaMutation
 } = api
