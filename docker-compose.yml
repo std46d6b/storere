@@ -1,5 +1,5 @@
 services:
-  postgres:
+  storere-postgres:
     image: postgres:17-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-storere}
@@ -11,32 +11,32 @@ services:
       timeout: 3s
       retries: 20
     volumes: [postgres_data:/var/lib/postgresql/data]
-  minio:
+  storere-minio:
     image: quay.io/minio/minio:latest
     command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-storere}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-this-minio-password}
     volumes: [minio_data:/data]
-  migrate:
+  storere-migrate:
     image: migrate/migrate:v4.18.3
     volumes: [./backend/migrations:/migrations:ro]
-    command: ["-path=/migrations", "-database=postgres://${POSTGRES_USER:-storere}:${POSTGRES_PASSWORD:-storere_dev_only}@postgres:5432/${POSTGRES_DB:-storere}?sslmode=disable", "up"]
-    depends_on: { postgres: { condition: service_healthy } }
-  api:
+    command: ["-path=/migrations", "-database=postgres://${POSTGRES_USER:-storere}:${POSTGRES_PASSWORD:-storere_dev_only}@storere-postgres:5432/${POSTGRES_DB:-storere}?sslmode=disable", "up"]
+    depends_on: { storere-postgres: { condition: service_healthy } }
+  storere-api:
     build: ./backend
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-storere}:${POSTGRES_PASSWORD:-storere_dev_only}@postgres:5432/${POSTGRES_DB:-storere}?sslmode=disable
-      COOKIE_SECURE: "false"
-      MINIO_ENDPOINT: minio:9000
+      DATABASE_URL: postgres://${POSTGRES_USER:-storere}:${POSTGRES_PASSWORD:-storere_dev_only}@storere-postgres:5432/${POSTGRES_DB:-storere}?sslmode=disable
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      MINIO_ENDPOINT: storere-minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-storere}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-change-this-minio-password}
       MINIO_BUCKET: storere
       MINIO_USE_SSL: "false"
       MAX_UPLOAD_BYTES: "15728640"
-    depends_on: { migrate: { condition: service_completed_successfully } }
+    depends_on: { storere-migrate: { condition: service_completed_successfully } }
   web:
     build: { context: ., dockerfile: frontend/Dockerfile }
     ports: ["8000:80"]
-    depends_on: [api]
+    depends_on: [storere-api]
 volumes: { postgres_data: {}, minio_data: {} }
