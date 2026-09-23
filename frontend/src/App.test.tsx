@@ -61,6 +61,8 @@ describe('App', () => {
 
     render(<Provider store={store}><App /></Provider>)
     await screen.findByRole('heading', { name: /мои вещи/i })
+    expect(screen.getByText('Misha · @misha')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Выйти' }).previousElementSibling).toHaveTextContent('Misha · @misha')
     fireEvent.click(screen.getByRole('button', { name: /коробки/i }))
     await screen.findByRole('button', { name: /архив/i })
     fireEvent.click(screen.getByRole('button', { name: /архив/i }))
