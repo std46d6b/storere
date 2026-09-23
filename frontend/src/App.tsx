@@ -11,6 +11,7 @@ import {
 type Entity = { kind: 'item'; value: Item } | { kind: 'box'; value: Box } | { kind: 'location'; value: Location }
 function message(error: unknown) { return (error as { data?: ApiError })?.data?.message ?? 'Не удалось выполнить запрос. Попробуйте ещё раз.' }
 function stateMeta(state: string) {
+  if (state === 'deleted') return { icon: '×', label: 'Удалено' }
   if (state === 'temporarily_removed') return { icon: '⌛', label: 'Временно убрано' }
   if (state === 'archived') return { icon: '▧', label: 'В архиве' }
   return { icon: '●', label: 'Активно' }
