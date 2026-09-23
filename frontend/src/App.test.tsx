@@ -52,7 +52,7 @@ describe('App', () => {
       if (url.pathname.endsWith('/spaces')) return json([{ id: 'space-1', name: 'Квартира', role: 'owner' }])
       if (url.pathname.endsWith('/locations')) return json([{ id: 'location-1', name: 'Кладовая', state: 'active' }])
       if (url.pathname.endsWith('/boxes')) return json([{ id: 'box-1', name: 'Архив', description: 'Документы', currentLocationId: 'location-1', state: 'active', itemCount: 1 }])
-      if (url.pathname.endsWith('/items')) return json([{ id: 'item-1', name: 'Паспорт', boxId: 'box-1', state: 'active', photoCount: 1 }])
+      if (url.pathname.endsWith('/items')) return json([{ id: 'item-1', name: 'Паспорт', boxId: 'box-1', state: 'active', photoCount: 1, media: [{ id: 'media-1', url: '/api/v1/media/media-1' }] }])
       if (url.pathname.endsWith('/box/box-1/timeline')) return json([{ action: 'created', occurredAt: '2026-09-23T00:00:00Z' }])
       if (url.pathname.endsWith('/boxes/box-1') && request.method === 'PATCH') return new Response(null, { status: 204 })
       if (url.pathname.endsWith('/boxes/box-1/move') && request.method === 'PATCH') return new Response(null, { status: 204 })
@@ -67,6 +67,7 @@ describe('App', () => {
 
     expect((await screen.findAllByRole('heading', { name: 'Архив' })).length).toBeGreaterThan(1)
     expect(screen.getByText('Паспорт')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Паспорт' })).toHaveAttribute('src', '/api/v1/media/media-1')
     fireEvent.click(screen.getByRole('tab', { name: /история/i }))
     expect(await screen.findByText('created')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: /настройки/i }))
