@@ -329,7 +329,7 @@ func (s *server) locations(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "forbidden", "No access")
 		return
 	}
-	rows, e := s.db.Query(r.Context(), "select id,name,code,description,icon,parent_location_id,state from locations where storage_space_id=$1 and deleted_at is null order by name", space)
+	rows, e := s.db.Query(r.Context(), "select id,name,code,description,icon,parent_location_id,case when deleted_at is null then state else 'deleted' end from locations where storage_space_id=$1 order by name", space)
 	if e != nil {
 		fail(w, 500, "query_failed", "Could not list locations")
 		return
@@ -371,7 +371,7 @@ func (s *server) boxes(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "forbidden", "No access")
 		return
 	}
-	rows, e := s.db.Query(r.Context(), "select b.id,b.name,b.description,b.current_location_id,b.temporary_location_id,b.state,count(i.id) from boxes b left join items i on i.box_id=b.id and i.deleted_at is null where b.storage_space_id=$1 and b.deleted_at is null group by b.id order by b.name", space)
+	rows, e := s.db.Query(r.Context(), "select b.id,b.name,b.description,b.current_location_id,b.temporary_location_id,case when b.deleted_at is null then b.state else 'deleted' end,count(i.id) from boxes b left join items i on i.box_id=b.id and i.deleted_at is null where b.storage_space_id=$1 group by b.id order by b.name", space)
 	if e != nil {
 		fail(w, 500, "query_failed", "Could not list boxes")
 		return
@@ -440,7 +440,7 @@ func (s *server) items(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "forbidden", "No access")
 		return
 	}
-	rows, e := s.db.Query(r.Context(), "select i.id,i.name,i.description,i.box_id,i.state,count(im.media_id),min(im.media_id::text) filter (where im.is_cover) from items i left join item_media im on im.item_id=i.id where i.storage_space_id=$1 and i.deleted_at is null group by i.id order by i.updated_at desc", space)
+	rows, e := s.db.Query(r.Context(), "select i.id,i.name,i.description,i.box_id,case when i.deleted_at is null then i.state else 'deleted' end,count(im.media_id),min(im.media_id::text) filter (where im.is_cover) from items i left join item_media im on im.item_id=i.id where i.storage_space_id=$1 group by i.id order by i.updated_at desc", space)
 	if e != nil {
 		fail(w, 500, "query_failed", "Could not list items")
 		return

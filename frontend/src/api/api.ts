@@ -32,9 +32,12 @@ export const api = createApi({
     createBox: build.mutation<Box, { spaceId: string; name: string; description?: string; locationId?: string }>({ query: ({ spaceId, ...body }) => ({ url: `spaces/${spaceId}/boxes`, method: 'POST', body }), invalidatesTags: ['Box'] }),
     createItem: build.mutation<Item, { spaceId: string; name: string; description?: string; boxId?: string; mediaIds: string[] }>({ query: ({ spaceId, ...body }) => ({ url: `spaces/${spaceId}/items`, method: 'POST', body }), invalidatesTags: ['Item', 'Box'] }),
     updateItem: build.mutation<void, { id: string; name?: string; description?: string; state?: string }>({ query: ({ id, ...body }) => ({ url: `items/${id}`, method: 'PATCH', body }), invalidatesTags: ['Item'] }),
+	deleteItem: build.mutation<void, string>({ query: (id) => ({ url: `items/${id}`, method: 'DELETE' }), invalidatesTags: ['Item', 'Box'] }),
     replaceItemMedia: build.mutation<void, { id: string; mediaId: string }>({ query: ({ id, ...body }) => ({ url: `items/${id}/media`, method: 'PATCH', body }), invalidatesTags: ['Item', 'Media'] }),
     updateBox: build.mutation<void, { id: string; name?: string; description?: string; state?: string }>({ query: ({ id, ...body }) => ({ url: `boxes/${id}`, method: 'PATCH', body }), invalidatesTags: ['Box'] }),
+	deleteBox: build.mutation<void, string>({ query: (id) => ({ url: `boxes/${id}`, method: 'DELETE' }), invalidatesTags: ['Box'] }),
     updateLocation: build.mutation<void, { id: string; name?: string; description?: string; state?: string }>({ query: ({ id, ...body }) => ({ url: `locations/${id}`, method: 'PATCH', body }), invalidatesTags: ['Location'] }),
+	deleteLocation: build.mutation<void, string>({ query: (id) => ({ url: `locations/${id}`, method: 'DELETE' }), invalidatesTags: ['Location'] }),
     moveBox: build.mutation<void, { id: string; locationId: string; temporary?: boolean }>({ query: ({ id, ...body }) => ({ url: `boxes/${id}/move`, method: 'PATCH', body }), invalidatesTags: ['Box'] }),
     timeline: build.query<TimelineEvent[], { entity: 'item' | 'box' | 'location'; id: string }>({ query: ({ entity, id }) => `${entity}/${id}/timeline` }),
     uploadMedia: build.mutation<Media, { spaceId: string; file: File }>({
@@ -53,6 +56,6 @@ export const {
   useMeQuery, useLoginMutation, useRegisterMutation, useLogoutMutation,
   useSpacesQuery, useCreateSpaceMutation, useItemsQuery, useSearchQuery,
   useBoxesQuery, useLocationsQuery, useCreateLocationMutation, useCreateBoxMutation,
-  useCreateItemMutation, useUpdateItemMutation, useReplaceItemMediaMutation, useUpdateBoxMutation, useUpdateLocationMutation,
+  useCreateItemMutation, useUpdateItemMutation, useDeleteItemMutation, useReplaceItemMediaMutation, useUpdateBoxMutation, useDeleteBoxMutation, useUpdateLocationMutation, useDeleteLocationMutation,
   useMoveBoxMutation, useTimelineQuery, useUploadMediaMutation
 } = api
