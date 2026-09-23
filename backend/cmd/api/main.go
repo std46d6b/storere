@@ -73,6 +73,7 @@ func (s *server) router() http.Handler {
 	mux.Handle("GET /api/v1/spaces/{spaceID}/items", s.auth(http.HandlerFunc(s.items)))
 	mux.Handle("POST /api/v1/spaces/{spaceID}/items", s.auth(http.HandlerFunc(s.createItem)))
 	mux.Handle("PATCH /api/v1/items/{itemID}", s.auth(http.HandlerFunc(s.patchItem)))
+	mux.Handle("PATCH /api/v1/items/{itemID}/media", s.auth(http.HandlerFunc(s.replaceItemMedia)))
 	mux.Handle("DELETE /api/v1/items/{itemID}", s.auth(http.HandlerFunc(s.deleteItem)))
 	mux.Handle("PATCH /api/v1/boxes/{boxID}", s.auth(http.HandlerFunc(s.patchBox)))
 	mux.Handle("DELETE /api/v1/boxes/{boxID}", s.auth(http.HandlerFunc(s.deleteBox)))
@@ -513,6 +514,43 @@ func (s *server) createItem(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) patchItem(w http.ResponseWriter, r *http.Request) {
 	s.updateEntity(w, r, "items", "item", "itemID")
+}
+func (s *server) replaceItemMedia(w http.ResponseWriter, r *http.Request) {
+	id, spaceID, ok := s.editableEntity(r, "items", "itemID")
+	if !ok || !s.can(r, spaceID, "editor") {
+		fail(w, http.StatusNotFound, "not_found", "Resource not found")
+		return
+	}
+	var in struct{ MediaID string }
+	if !decode(r, &in) || in.MediaID == "" {
+		fail(w, http.StatusBadRequest, "invalid_input", "Photo is required")
+		return
+	}
+	tx, err := s.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 500, "transaction_failed", "Could not replace photo")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	var valid bool
+	if err = tx.QueryRow(r.Context(), "select exists(select 1 from media where id=$1 and storage_space_id=$2 and deleted_at is null)", in.MediaID, spaceID).Scan(&valid); err == nil && valid {
+		_, err = tx.Exec(r.Context(), "delete from item_media where item_id=$1", id)
+	}
+	if err == nil {
+		_, err = tx.Exec(r.Context(), "insert into item_media(item_id,media_id,position,is_cover) values($1,$2,0,true)", id, in.MediaID)
+	}
+	if err == nil {
+		_, err = tx.Exec(r.Context(), "update items set updated_at=now() where id=$1", id)
+	}
+	if err != nil || !valid {
+		fail(w, 400, "update_failed", "Could not replace photo")
+		return
+	}
+	if err = event(r, tx, spaceID, "item", id, "photo_replaced", current(r).ID, map[string]string{"mediaId": in.MediaID}); err != nil || tx.Commit(r.Context()) != nil {
+		fail(w, 500, "update_failed", "Could not replace photo")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 func (s *server) deleteItem(w http.ResponseWriter, r *http.Request) {
 	s.archiveEntity(w, r, "items", "item", "itemID")

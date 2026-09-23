@@ -22,6 +22,7 @@ func TestInventoryMutationsRequireSession(t *testing.T) {
 	s := NewServer(nil, true)
 	for _, request := range []struct{ method, path string }{
 		{http.MethodPatch, "/api/v1/items/85f35ef6-92a4-4dc8-97be-e844d7a58d4c"},
+		{http.MethodPatch, "/api/v1/items/85f35ef6-92a4-4dc8-97be-e844d7a58d4c/media"},
 		{http.MethodDelete, "/api/v1/boxes/85f35ef6-92a4-4dc8-97be-e844d7a58d4c"},
 		{http.MethodPatch, "/api/v1/locations/85f35ef6-92a4-4dc8-97be-e844d7a58d4c"},
 	} {
