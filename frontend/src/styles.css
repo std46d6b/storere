@@ -28,7 +28,7 @@ button { cursor: pointer; border: 0; border-radius: var(--radius-sm); padding: 1
 button:disabled { cursor: wait; opacity: .62; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 48%, transparent); outline-offset: 2px; }
 
-.app { min-height: 100dvh; display: grid; grid-template-columns: 248px minmax(0, 1fr); background: var(--canvas); }
+.app { min-height: 100dvh; display: grid; grid-template-columns: 248px minmax(0, 1fr); color: var(--ink); background: var(--canvas); }
 .app.dark { --canvas: #121310; --surface: #1e201d; --surface-muted: #292b27; --surface-raised: #242622; --ink: #f7f8f1; --ink-muted: #c3c6bc; --line: #3e413b; --line-strong: #565a51; --accent: #c4bdff; --accent-strong: #dedaff; --accent-soft: #36325d; --focus: #d1cbff; --shadow-sm: 0 1px 2px rgb(0 0 0 / 28%), 0 8px 22px rgb(0 0 0 / 16%); }
 
 aside { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 32px; padding: 28px 16px 18px; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--surface-muted) 82%, transparent); }
