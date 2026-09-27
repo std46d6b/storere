@@ -201,6 +201,9 @@ describe('App', () => {
 			expect(screen.getByAltText('')).toHaveAttribute('src', '/api/v1/media/media-1')
 		)
 		fireEvent.change(screen.getByPlaceholderText('Найти вещь…'), { target: { value: '' } })
+		fireEvent.change(screen.getByPlaceholderText('Найти вещь…'), { target: { value: '   ' } })
+		expect(await screen.findByRole('button', { name: /ключи без описания/i })).toBeInTheDocument()
+		fireEvent.change(screen.getByPlaceholderText('Найти вещь…'), { target: { value: '' } })
 		fireEvent.click(screen.getByRole('button', { name: 'Фильтр по коробке: Все коробки' }))
 		fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск коробки' }), {
 			target: { value: 'инстру' }

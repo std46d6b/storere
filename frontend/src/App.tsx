@@ -832,20 +832,21 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 	const [selected, setSelected] = useState<Entity | null>(null)
 	const [logout] = useLogoutMutation()
 	const activeSpace = spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0]
+	const searchQuery = query.trim()
 	const {
 		data: itemList = [],
 		isLoading: itemsLoading,
 		error: itemsError
-	} = useItemsQuery(activeSpace?.id ?? '', { skip: !activeSpace || Boolean(query) })
+	} = useItemsQuery(activeSpace?.id ?? '', { skip: !activeSpace || Boolean(searchQuery) })
 	const { data: searchResults = [] } = useSearchQuery(
-		{ spaceId: activeSpace?.id ?? '', q: query },
-		{ skip: !activeSpace || !query }
+		{ spaceId: activeSpace?.id ?? '', q: searchQuery },
+		{ skip: !activeSpace || !searchQuery }
 	)
 	const { data: boxList = [] } = useBoxesQuery(activeSpace?.id ?? '', { skip: !activeSpace })
 	const { data: locationList = [] } = useLocationsQuery(activeSpace?.id ?? '', {
 		skip: !activeSpace
 	})
-	const items = query ? searchResults : itemList
+	const items = searchQuery ? searchResults : itemList
 	const unfilteredRecords = view === 'items' ? items : view === 'boxes' ? boxList : locationList
 	const availableTags = [
 		...new Map(items.flatMap((item) => item.tags ?? []).map((tag) => [tag.id, tag])).values()
