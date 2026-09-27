@@ -830,7 +830,7 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 		respond(w, 200, []any{})
 		return
 	}
-	rows, e := s.db.Query(r.Context(), "select id,name,description,box_id,state from items where storage_space_id=$1 and deleted_at is null and (search_vector @@ websearch_to_tsquery('simple',$2) or name % $2) order by similarity(name,$2) desc limit 50", space, q)
+	rows, e := s.db.Query(r.Context(), "select i.id,i.name,i.description,i.box_id,i.state,count(im.media_id),min(im.media_id::text) filter (where im.is_cover) from items i left join item_media im on im.item_id=i.id where i.storage_space_id=$1 and i.deleted_at is null and (i.search_vector @@ websearch_to_tsquery('simple',$2) or i.name % $2) group by i.id order by similarity(i.name,$2) desc limit 50", space, q)
 	if e != nil {
 		fail(w, 500, "query_failed", "Search failed")
 		return
@@ -839,9 +839,14 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 	out := []map[string]any{}
 	for rows.Next() {
 		var id, n, st string
-		var d, b *string
-		_ = rows.Scan(&id, &n, &d, &b, &st)
-		out = append(out, map[string]any{"id": id, "name": n, "description": d, "boxId": b, "state": st, "type": "item"})
+		var d, b, coverID *string
+		var photos int
+		_ = rows.Scan(&id, &n, &d, &b, &st, &photos, &coverID)
+		item := map[string]any{"id": id, "name": n, "description": d, "boxId": b, "state": st, "photoCount": photos, "type": "item"}
+		if coverID != nil {
+			item["media"] = []map[string]string{{"id": *coverID, "url": "/api/v1/media/" + *coverID}}
+		}
+		out = append(out, item)
 	}
 	respond(w, 200, out)
 }

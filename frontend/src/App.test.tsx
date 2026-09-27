@@ -137,6 +137,17 @@ describe('App', () => {
 							photoCount: 0
 						}
 					])
+				if (url.pathname.endsWith('/search'))
+					return json([
+						{
+							id: 'item-1',
+							name: 'Паспорт',
+							boxId: 'box-1',
+							state: 'active',
+							photoCount: 1,
+							media: [{ id: 'media-1', url: '/api/v1/media/media-1' }]
+						}
+					])
 				if (url.pathname.endsWith('/box/box-1/timeline'))
 					return json([{ action: 'created', occurredAt: '2026-09-23T00:00:00Z' }])
 				if (url.pathname.endsWith('/boxes/box-1') && request.method === 'PATCH')
@@ -161,6 +172,11 @@ describe('App', () => {
 		)
 		expect((await screen.findByAltText('')).parentElement).toHaveClass('preview-image')
 		expect(screen.getByText('Архив', { selector: '.preview-photo-count' })).toBeInTheDocument()
+		fireEvent.change(screen.getByPlaceholderText('Найти вещь…'), { target: { value: 'паспорт' } })
+		await waitFor(() =>
+			expect(screen.getByAltText('')).toHaveAttribute('src', '/api/v1/media/media-1')
+		)
+		fireEvent.change(screen.getByPlaceholderText('Найти вещь…'), { target: { value: '' } })
 		fireEvent.click(screen.getByRole('button', { name: 'Фильтр по коробке: Все коробки' }))
 		fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск коробки' }), {
 			target: { value: 'инстру' }
