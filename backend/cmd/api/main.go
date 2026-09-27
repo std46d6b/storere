@@ -279,11 +279,113 @@ func convertImageToWebP(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if !isHEIC(data) {
+		decoded = applyEXIFOrientation(decoded, jpegEXIFOrientation(data))
+	}
 	var output bytes.Buffer
 	if err := webp.Encode(&output, decoded, &webp.Options{Quality: 85}); err != nil {
 		return nil, err
 	}
 	return output.Bytes(), nil
+}
+
+func jpegEXIFOrientation(data []byte) int {
+	if len(data) < 4 || data[0] != 0xff || data[1] != 0xd8 {
+		return 1
+	}
+	for offset := 2; offset+4 <= len(data); {
+		if data[offset] != 0xff {
+			return 1
+		}
+		marker := data[offset+1]
+		offset += 2
+		if marker == 0xd9 || marker == 0xda || offset+2 > len(data) {
+			return 1
+		}
+		length := int(data[offset])<<8 | int(data[offset+1])
+		if length < 2 || offset+length > len(data) {
+			return 1
+		}
+		if marker == 0xe1 && length >= 16 && string(data[offset+2:offset+8]) == "Exif\x00\x00" {
+			return tiffOrientation(data[offset+8 : offset+length])
+		}
+		offset += length
+	}
+	return 1
+}
+
+func tiffOrientation(data []byte) int {
+	if len(data) < 14 {
+		return 1
+	}
+	littleEndian := string(data[:2]) == "II"
+	if !littleEndian && string(data[:2]) != "MM" {
+		return 1
+	}
+	uint16At := func(offset int) uint16 {
+		if littleEndian {
+			return uint16(data[offset]) | uint16(data[offset+1])<<8
+		}
+		return uint16(data[offset])<<8 | uint16(data[offset+1])
+	}
+	uint32At := func(offset int) uint32 {
+		if littleEndian {
+			return uint32(data[offset]) | uint32(data[offset+1])<<8 | uint32(data[offset+2])<<16 | uint32(data[offset+3])<<24
+		}
+		return uint32(data[offset])<<24 | uint32(data[offset+1])<<16 | uint32(data[offset+2])<<8 | uint32(data[offset+3])
+	}
+	if uint16At(2) != 42 {
+		return 1
+	}
+	ifd := int(uint32At(4))
+	if ifd < 0 || ifd+2 > len(data) {
+		return 1
+	}
+	entries := int(uint16At(ifd))
+	for entry := ifd + 2; entries > 0 && entry+12 <= len(data); entries, entry = entries-1, entry+12 {
+		if uint16At(entry) == 0x0112 && uint16At(entry+2) == 3 && uint32At(entry+4) >= 1 {
+			if orientation := int(uint16At(entry + 8)); orientation >= 1 && orientation <= 8 {
+				return orientation
+			}
+		}
+	}
+	return 1
+}
+
+func applyEXIFOrientation(source image.Image, orientation int) image.Image {
+	if orientation == 1 {
+		return source
+	}
+	bounds := source.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+	rotated := orientation >= 5
+	output := image.NewNRGBA(image.Rect(0, 0, width, height))
+	if rotated {
+		output = image.NewNRGBA(image.Rect(0, 0, height, width))
+	}
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			destinationX, destinationY := x, y
+			switch orientation {
+			case 2:
+				destinationX = width - 1 - x
+			case 3:
+				destinationX, destinationY = width-1-x, height-1-y
+			case 4:
+				destinationY = height - 1 - y
+			case 5:
+				destinationX, destinationY = y, x
+			case 6:
+				destinationX, destinationY = height-1-y, x
+			case 7:
+				destinationX, destinationY = height-1-y, width-1-x
+			case 8:
+				destinationX, destinationY = y, width-1-x
+			}
+			output.Set(destinationX, destinationY, source.At(bounds.Min.X+x, bounds.Min.Y+y))
+		}
+	}
+	return output
 }
 
 func mediaObjectKeys(spaceID, mediaID, contentType string) (string, string) {

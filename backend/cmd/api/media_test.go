@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"image/png"
 	"net/http"
 	"net/http/httptest"
@@ -72,6 +73,37 @@ func TestConvertImageToWebP(t *testing.T) {
 	if got := http.DetectContentType(converted); got != "image/webp" {
 		t.Fatalf("got %q, want image/webp", got)
 	}
+}
+
+func TestConvertImageToWebPPreservesJPEGOrientation(t *testing.T) {
+	var source bytes.Buffer
+	if err := jpeg.Encode(&source, image.NewNRGBA(image.Rect(0, 0, 2, 3)), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	converted, err := convertImageToWebP(withEXIFOrientation(source.Bytes(), 6))
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, _, err := image.Decode(bytes.NewReader(converted))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := decoded.Bounds().Size(); got != (image.Point{X: 3, Y: 2}) {
+		t.Fatalf("got %v, want portrait orientation rotated to 3x2", got)
+	}
+}
+
+func withEXIFOrientation(jpegData []byte, orientation byte) []byte {
+	payload := []byte{
+		'E', 'x', 'i', 'f', 0, 0,
+		'I', 'I', 42, 0, 8, 0, 0, 0,
+		1, 0,
+		0x12, 0x01, 3, 0, 1, 0, 0, 0, orientation, 0, 0, 0,
+		0, 0, 0, 0,
+	}
+	app1 := append([]byte{0xff, 0xe1, 0, byte(len(payload) + 2)}, payload...)
+	return append(append([]byte{}, jpegData[:2]...), append(app1, jpegData[2:]...)...)
 }
 
 func TestMediaObjectKeysKeepOriginalAndWebP(t *testing.T) {
