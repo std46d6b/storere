@@ -136,10 +136,9 @@ describe('App', () => {
 		)
 		expect((await screen.findByAltText('')).parentElement).toHaveClass('preview-image')
 		fireEvent.click(await screen.findByRole('button', { name: /паспорт/i }))
-		expect(await screen.findByRole('img', { name: 'Фото вещи: Паспорт' })).toHaveAttribute(
-			'src',
-			'/api/v1/media/media-1'
-		)
+		const detailPhoto = await screen.findByRole('img', { name: 'Фото вещи: Паспорт' })
+		expect(detailPhoto).toHaveAttribute('src', '/api/v1/media/media-1')
+		expect(detailPhoto.parentElement?.parentElement).toHaveClass('item-detail-gallery')
 		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
 		fireEvent.click(screen.getByRole('button', { name: /коробки/i }))
 		await screen.findByRole('button', { name: /архив/i })

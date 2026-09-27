@@ -434,6 +434,11 @@ h2 {
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
 }
+.item-detail-gallery {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+}
 .item-detail-photo {
 	display: grid;
 	place-items: center;
@@ -450,6 +455,11 @@ h2 {
 	width: auto;
 	height: auto;
 	object-fit: contain;
+}
+.item-detail-photo:only-child {
+	grid-column: 1 / -1;
+	width: 50%;
+	justify-self: center;
 }
 .empty {
 	padding: 38px;

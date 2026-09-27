@@ -428,6 +428,7 @@ function EntityDialog({
 		}
 	}
 	const boxItems = entity.kind === 'box' ? items.filter((item) => item.boxId === current.id) : []
+	const itemMedia = entity.kind === 'item' ? ((current as Item).media ?? []) : []
 	return (
 		<div className="backdrop" onMouseDown={onClose}>
 			<section
@@ -482,9 +483,20 @@ function EntityDialog({
 								<p className="muted">В этой коробке пока нет вещей.</p>
 							)
 						) : entity.kind === 'item' ? (
-							(current as Item).media?.[0] ? (
-								<div className="item-detail-photo">
-									<img src={(current as Item).media![0].url} alt={`Фото вещи: ${current.name}`} />
+							itemMedia.length ? (
+								<div className="item-detail-gallery">
+									{itemMedia.map((media, index) => (
+										<div className="item-detail-photo" key={media.id}>
+											<img
+												src={media.url}
+												alt={
+													itemMedia.length === 1
+														? `Фото вещи: ${current.name}`
+														: `Фото ${index + 1} вещи: ${current.name}`
+												}
+											/>
+										</div>
+									))}
 								</div>
 							) : (
 								<p className="muted">Фото: {(current as Item).photoCount}.</p>
