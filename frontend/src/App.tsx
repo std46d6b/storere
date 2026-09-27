@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import {
 	ApiError,
 	Box,
@@ -421,6 +421,15 @@ function EntityDialog({
 		entity.kind === 'item' ? (entity.value.media ?? []) : []
 	)
 	const [mediaToDelete, setMediaToDelete] = useState<Media | null>(null)
+	useEffect(() => {
+		function onKeyDown(event: KeyboardEvent) {
+			if (event.defaultPrevented || event.key !== 'Escape') return
+			if (mediaToDelete) setMediaToDelete(null)
+			else onClose()
+		}
+		window.addEventListener('keydown', onKeyDown)
+		return () => window.removeEventListener('keydown', onKeyDown)
+	}, [mediaToDelete, onClose])
 	const current = entity.value
 	const error = itemState.error || boxState.error || locationState.error || moveState.error
 	const saving =

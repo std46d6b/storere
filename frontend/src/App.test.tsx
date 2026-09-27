@@ -257,6 +257,9 @@ describe('App', () => {
 
 		expect((await screen.findAllByRole('heading', { name: 'Архив' })).length).toBeGreaterThan(1)
 		expect(screen.getByText('Паспорт')).toBeInTheDocument()
+		fireEvent.keyDown(document, { key: 'Escape' })
+		expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: /архив/i }))
 		expect(screen.getByRole('img', { name: 'Паспорт' })).toHaveAttribute(
 			'src',
 			'/api/v1/media/media-1'
