@@ -345,7 +345,7 @@ function AddDialog({ space, onClose }: { space: Space; onClose: () => void }) {
 									<input
 										aria-label="Фотография"
 										type="file"
-										accept="image/jpeg,image/png,image/webp"
+										accept="image/jpeg,image/png,image/gif,image/webp,image/heic,.heic"
 										required={!media}
 										onChange={(event) => upload(event.currentTarget.files?.[0])}
 									/>
@@ -536,7 +536,7 @@ function EntityDialog({
 								<input
 									aria-label="Заменить фотографию"
 									type="file"
-									accept="image/jpeg,image/png,image/webp"
+									accept="image/jpeg,image/png,image/gif,image/webp,image/heic,.heic"
 									onChange={async (event) => {
 										const file = event.currentTarget.files?.[0]
 										if (file) setReplacement(await uploadMedia({ spaceId, file }).unwrap())

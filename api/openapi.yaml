@@ -72,7 +72,7 @@ paths:
   /media:
     post:
       security: [{ cookieAuth: [] }]
-      requestBody: { required: true, content: { multipart/form-data: { schema: { type: object, required: [spaceId, file], properties: { spaceId: { type: string, format: uuid }, file: { type: string, format: binary } } } } } }
+      requestBody: { required: true, description: JPEG, PNG, GIF, WebP or HEIC image; original and WebP derivative are retained, content: { multipart/form-data: { schema: { type: object, required: [spaceId, file], properties: { spaceId: { type: string, format: uuid }, file: { type: string, format: binary } } } } } }
       responses: { '201': { description: Uploaded, content: { application/json: { schema: { $ref: '#/components/schemas/Media' } } } }, '400': { description: Invalid image }, '403': { description: Forbidden } }
   /media/{mediaID}:
     parameters: [{ name: mediaID, in: path, required: true, schema: { type: string, format: uuid } }]

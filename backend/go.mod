@@ -3,6 +3,8 @@ module github.com/std46d6b/storere/backend
 go 1.24.0
 
 require (
+	github.com/SeriousBug/webp-go-pure v1.2.0
+	github.com/gen2brain/heic v0.5.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/minio/minio-go/v7 v7.0.97
@@ -11,6 +13,7 @@ require (
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
