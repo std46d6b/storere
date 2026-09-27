@@ -619,6 +619,111 @@ h2 {
 	border: 1px solid var(--line);
 	border-radius: 10px;
 }
+.photo-manager {
+	display: grid;
+	gap: 12px;
+	margin-top: 8px;
+	padding: 16px;
+	border: 1px solid var(--line);
+	border-radius: 14px;
+	background: var(--surface-muted);
+}
+.photo-manager-heading,
+.photo-manager-actions,
+.photo-delete-confirm > div {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+.photo-manager-heading p,
+.photo-delete-confirm p {
+	margin: 3px 0 0;
+	color: var(--ink-muted);
+	font-size: 12px;
+}
+.photo-upload-button {
+	display: inline-flex;
+	align-items: center;
+	min-height: 36px;
+	padding: 0 12px;
+	border: 1px solid var(--line-strong);
+	border-radius: 9px;
+	color: var(--accent);
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.photo-upload-button input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+.photo-manager-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 10px;
+}
+.photo-manager-card {
+	position: relative;
+	overflow: hidden;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--surface);
+}
+.photo-manager-card img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 4 / 3;
+	object-fit: cover;
+}
+.photo-position {
+	position: absolute;
+	top: 7px;
+	left: 7px;
+	padding: 3px 7px;
+	border-radius: 999px;
+	color: #fff;
+	background: rgb(17 18 16 / 78%);
+	font-size: 11px;
+	font-weight: 700;
+}
+.photo-manager-actions {
+	padding: 8px;
+}
+.photo-manager-actions button {
+	min-width: 30px;
+	height: 30px;
+	padding: 0 8px;
+	border: 1px solid var(--line);
+	border-radius: 7px;
+	font-size: 14px;
+}
+.photo-manager-actions .photo-remove {
+	margin-left: auto;
+	border-color: color-mix(in srgb, var(--danger) 50%, var(--line));
+	color: var(--danger);
+	font-size: 12px;
+}
+.photo-manager-empty {
+	margin: 0;
+	padding: 14px;
+	border: 1px dashed var(--line-strong);
+	border-radius: 9px;
+	color: var(--ink-muted);
+	font-size: 13px;
+}
+.photo-delete-confirm {
+	display: grid;
+	gap: 8px;
+	padding: 12px;
+	border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line));
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+}
 .tabs {
 	display: flex;
 	gap: 4px;

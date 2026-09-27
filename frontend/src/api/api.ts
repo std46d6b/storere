@@ -128,8 +128,16 @@ export const api = createApi({
 			query: (id) => ({ url: `items/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['Item', 'Box']
 		}),
-		replaceItemMedia: build.mutation<void, { id: string; mediaId: string }>({
+		addItemMedia: build.mutation<void, { id: string; mediaId: string }>({
+			query: ({ id, ...body }) => ({ url: `items/${id}/media`, method: 'POST', body }),
+			invalidatesTags: ['Item', 'Media']
+		}),
+		reorderItemMedia: build.mutation<void, { id: string; mediaIds: string[] }>({
 			query: ({ id, ...body }) => ({ url: `items/${id}/media`, method: 'PATCH', body }),
+			invalidatesTags: ['Item', 'Media']
+		}),
+		removeItemMedia: build.mutation<void, { id: string; mediaId: string }>({
+			query: ({ id, mediaId }) => ({ url: `items/${id}/media/${mediaId}`, method: 'DELETE' }),
 			invalidatesTags: ['Item', 'Media']
 		}),
 		updateBox: build.mutation<
@@ -189,7 +197,9 @@ export const {
 	useCreateItemMutation,
 	useUpdateItemMutation,
 	useDeleteItemMutation,
-	useReplaceItemMediaMutation,
+	useAddItemMediaMutation,
+	useReorderItemMediaMutation,
+	useRemoveItemMediaMutation,
 	useUpdateBoxMutation,
 	useDeleteBoxMutation,
 	useUpdateLocationMutation,

@@ -75,6 +75,21 @@ paths:
       security: [{ cookieAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { name: { type: string }, description: { type: string }, state: { type: string }, boxId: { type: [string, 'null'], format: uuid } } } } } }
       responses: { '204': { description: Updated }, '400': { description: Invalid input }, '403': { description: Forbidden }, '404': { description: Missing } }
+  /items/{itemID}/media:
+    parameters: [{ name: itemID, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      security: [{ cookieAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [mediaId], properties: { mediaId: { type: string, format: uuid } } } } } }
+      responses: { '204': { description: Added }, '400': { description: Invalid media }, '404': { description: Missing } }
+    patch:
+      security: [{ cookieAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [mediaIds], properties: { mediaIds: { type: array, items: { type: string, format: uuid } } } } } } }
+      responses: { '204': { description: Reordered }, '400': { description: Invalid order }, '404': { description: Missing } }
+  /items/{itemID}/media/{mediaID}:
+    parameters: [{ name: itemID, in: path, required: true, schema: { type: string, format: uuid } }, { name: mediaID, in: path, required: true, schema: { type: string, format: uuid } }]
+    delete:
+      security: [{ cookieAuth: [] }]
+      responses: { '204': { description: Removed from item }, '404': { description: Missing } }
   /media:
     post:
       security: [{ cookieAuth: [] }]

@@ -26,7 +26,9 @@ import {
 	useDeleteItemMutation,
 	useDeleteBoxMutation,
 	useDeleteLocationMutation,
-	useReplaceItemMediaMutation,
+	useAddItemMediaMutation,
+	useReorderItemMediaMutation,
+	useRemoveItemMediaMutation,
 	useUpdateLocationMutation,
 	useUploadMediaMutation
 } from './api/api'
@@ -404,8 +406,13 @@ function EntityDialog({
 	const [deleteLocation, deleteLocationState] = useDeleteLocationMutation()
 	const [confirmDelete, setConfirmDelete] = useState(false)
 	const [uploadMedia, uploadState] = useUploadMediaMutation()
-	const [replaceItemMedia, replaceMediaState] = useReplaceItemMediaMutation()
-	const [replacement, setReplacement] = useState<Media | null>(null)
+	const [addItemMedia, addMediaState] = useAddItemMediaMutation()
+	const [reorderItemMedia, reorderMediaState] = useReorderItemMediaMutation()
+	const [removeItemMedia, removeMediaState] = useRemoveItemMediaMutation()
+	const [gallery, setGallery] = useState<Media[]>(
+		entity.kind === 'item' ? (entity.value.media ?? []) : []
+	)
+	const [mediaToDelete, setMediaToDelete] = useState<Media | null>(null)
 	const current = entity.value
 	const error = itemState.error || boxState.error || locationState.error || moveState.error
 	const saving =
@@ -421,7 +428,6 @@ function EntityDialog({
 		}
 		if (entity.kind === 'item') {
 			await updateItem({ id: current.id, ...body, boxId: String(form.get('boxId') || '') }).unwrap()
-			if (replacement) await replaceItemMedia({ id: current.id, mediaId: replacement.id }).unwrap()
 		}
 		if (entity.kind === 'location') await updateLocation({ id: current.id, ...body }).unwrap()
 		if (entity.kind === 'box') {
@@ -430,7 +436,29 @@ function EntityDialog({
 		}
 	}
 	const boxItems = entity.kind === 'box' ? items.filter((item) => item.boxId === current.id) : []
-	const itemMedia = entity.kind === 'item' ? ((current as Item).media ?? []) : []
+	const itemMedia = entity.kind === 'item' ? gallery : []
+	async function uploadPhotos(files: FileList | null) {
+		if (!files || entity.kind !== 'item') return
+		for (const file of Array.from(files)) {
+			const media = await uploadMedia({ spaceId, file }).unwrap()
+			await addItemMedia({ id: current.id, mediaId: media.id }).unwrap()
+			setGallery((photos) => [...photos, media])
+		}
+	}
+	async function movePhoto(index: number, direction: -1 | 1) {
+		const next = [...gallery]
+		const target = index + direction
+		if (!next[target]) return
+		;[next[index], next[target]] = [next[target], next[index]]
+		await reorderItemMedia({ id: current.id, mediaIds: next.map((media) => media.id) }).unwrap()
+		setGallery(next)
+	}
+	async function confirmPhotoRemoval() {
+		if (!mediaToDelete) return
+		await removeItemMedia({ id: current.id, mediaId: mediaToDelete.id }).unwrap()
+		setGallery((photos) => photos.filter((media) => media.id !== mediaToDelete.id))
+		setMediaToDelete(null)
+	}
 	return (
 		<div className="backdrop" onMouseDown={onClose}>
 			<section
@@ -563,21 +591,87 @@ function EntityDialog({
 										))}
 									</select>
 								</label>
-								<label>
-									Заменить фотографию
-									<input
-										aria-label="Заменить фотографию"
-										type="file"
-										accept="image/jpeg,image/png,image/gif,image/webp,image/heic,.heic"
-										onChange={async (event) => {
-											const file = event.currentTarget.files?.[0]
-											if (file) setReplacement(await uploadMedia({ spaceId, file }).unwrap())
-										}}
-									/>
-									{replacement && (
-										<img className="upload-preview" src={replacement.url} alt="Новая фотография" />
+								<section className="photo-manager" aria-label="Фотографии вещи">
+									<div className="photo-manager-heading">
+										<div>
+											<b>Фотографии</b>
+											<p>Первая фотография используется на карточке вещи.</p>
+										</div>
+										<label className="photo-upload-button">
+											Добавить фото
+											<input
+												aria-label="Добавить фотографии"
+												type="file"
+												multiple
+												accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif"
+												disabled={uploadState.isLoading || addMediaState.isLoading}
+												onChange={(event) => void uploadPhotos(event.currentTarget.files)}
+											/>
+										</label>
+									</div>
+									{itemMedia.length ? (
+										<div className="photo-manager-grid">
+											{itemMedia.map((media, index) => (
+												<article className="photo-manager-card" key={media.id}>
+													<img src={media.url} alt={`Фотография ${index + 1}`} />
+													<span className="photo-position">
+														{index === 0 ? 'Обложка' : `Фото ${index + 1}`}
+													</span>
+													<div className="photo-manager-actions">
+														<button
+															type="button"
+															aria-label={`Переместить фото ${index + 1} раньше`}
+															disabled={index === 0 || reorderMediaState.isLoading}
+															onClick={() => void movePhoto(index, -1)}>
+															←
+														</button>
+														<button
+															type="button"
+															aria-label={`Переместить фото ${index + 1} позже`}
+															disabled={
+																index === itemMedia.length - 1 || reorderMediaState.isLoading
+															}
+															onClick={() => void movePhoto(index, 1)}>
+															→
+														</button>
+														<button
+															type="button"
+															className="photo-remove"
+															aria-label={`Удалить фото ${index + 1}`}
+															onClick={() => setMediaToDelete(media)}>
+															Удалить
+														</button>
+													</div>
+												</article>
+											))}
+										</div>
+									) : (
+										<p className="photo-manager-empty">
+											Добавьте хотя бы одно фото, чтобы быстрее находить вещь.
+										</p>
 									)}
-								</label>
+									{mediaToDelete && (
+										<div
+											className="photo-delete-confirm"
+											role="alertdialog"
+											aria-label="Подтверждение удаления фото">
+											<b>Удалить эту фотографию?</b>
+											<p>Она исчезнет только из этой карточки. Следующее фото станет обложкой.</p>
+											<div>
+												<button type="button" onClick={() => setMediaToDelete(null)}>
+													Отмена
+												</button>
+												<button
+													type="button"
+													className="delete-button"
+													disabled={removeMediaState.isLoading}
+													onClick={() => void confirmPhotoRemoval()}>
+													Удалить фото
+												</button>
+											</div>
+										</div>
+									)}
+								</section>
 							</>
 						)}
 						{entity.kind === 'box' && (

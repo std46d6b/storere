@@ -79,7 +79,9 @@ func (s *server) router() http.Handler {
 	mux.Handle("GET /api/v1/spaces/{spaceID}/items", s.auth(http.HandlerFunc(s.items)))
 	mux.Handle("POST /api/v1/spaces/{spaceID}/items", s.auth(http.HandlerFunc(s.createItem)))
 	mux.Handle("PATCH /api/v1/items/{itemID}", s.auth(http.HandlerFunc(s.patchItem)))
-	mux.Handle("PATCH /api/v1/items/{itemID}/media", s.auth(http.HandlerFunc(s.replaceItemMedia)))
+	mux.Handle("POST /api/v1/items/{itemID}/media", s.auth(http.HandlerFunc(s.addItemMedia)))
+	mux.Handle("PATCH /api/v1/items/{itemID}/media", s.auth(http.HandlerFunc(s.reorderItemMedia)))
+	mux.Handle("DELETE /api/v1/items/{itemID}/media/{mediaID}", s.auth(http.HandlerFunc(s.removeItemMedia)))
 	mux.Handle("DELETE /api/v1/items/{itemID}", s.auth(http.HandlerFunc(s.deleteItem)))
 	mux.Handle("PATCH /api/v1/boxes/{boxID}", s.auth(http.HandlerFunc(s.patchBox)))
 	mux.Handle("DELETE /api/v1/boxes/{boxID}", s.auth(http.HandlerFunc(s.deleteBox)))
@@ -612,7 +614,7 @@ func (s *server) items(w http.ResponseWriter, r *http.Request) {
 		fail(w, 403, "forbidden", "No access")
 		return
 	}
-	rows, e := s.db.Query(r.Context(), "select i.id,i.name,i.description,i.box_id,case when i.deleted_at is null then i.state else 'deleted' end,count(im.media_id),min(im.media_id::text) filter (where im.is_cover) from items i left join item_media im on im.item_id=i.id where i.storage_space_id=$1 group by i.id order by i.updated_at desc", space)
+	rows, e := s.db.Query(r.Context(), "select i.id,i.name,i.description,i.box_id,case when i.deleted_at is null then i.state else 'deleted' end,count(im.media_id),coalesce(array_agg(im.media_id::text order by im.position) filter (where im.media_id is not null),'{}') from items i left join item_media im on im.item_id=i.id where i.storage_space_id=$1 group by i.id order by i.updated_at desc", space)
 	if e != nil {
 		fail(w, 500, "query_failed", "Could not list items")
 		return
@@ -621,12 +623,17 @@ func (s *server) items(w http.ResponseWriter, r *http.Request) {
 	out := []map[string]any{}
 	for rows.Next() {
 		var id, n, st string
-		var d, b, coverID *string
+		var d, b *string
+		var mediaIDs []string
 		var photos int
-		_ = rows.Scan(&id, &n, &d, &b, &st, &photos, &coverID)
+		_ = rows.Scan(&id, &n, &d, &b, &st, &photos, &mediaIDs)
 		item := map[string]any{"id": id, "name": n, "description": d, "boxId": b, "state": st, "photoCount": photos}
-		if coverID != nil {
-			item["media"] = []map[string]string{{"id": *coverID, "url": "/api/v1/media/" + *coverID}}
+		if len(mediaIDs) > 0 {
+			media := make([]map[string]string, 0, len(mediaIDs))
+			for _, mediaID := range mediaIDs {
+				media = append(media, map[string]string{"id": mediaID, "url": "/api/v1/media/" + mediaID})
+			}
+			item["media"] = media
 		}
 		out = append(out, item)
 	}
@@ -717,7 +724,7 @@ func (s *server) patchItem(w http.ResponseWriter, r *http.Request) {
 	s.audit(r, spaceID, "item", id, "updated", map[string]any{"name": in.Name, "description": in.Description, "state": in.State, "boxId": in.BoxID})
 	w.WriteHeader(http.StatusNoContent)
 }
-func (s *server) replaceItemMedia(w http.ResponseWriter, r *http.Request) {
+func (s *server) addItemMedia(w http.ResponseWriter, r *http.Request) {
 	id, spaceID, ok := s.editableEntity(r, "items", "itemID")
 	if !ok || !s.can(r, spaceID, "editor") {
 		fail(w, http.StatusNotFound, "not_found", "Resource not found")
@@ -730,26 +737,103 @@ func (s *server) replaceItemMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	tx, err := s.db.Begin(r.Context())
 	if err != nil {
-		fail(w, 500, "transaction_failed", "Could not replace photo")
+		fail(w, 500, "transaction_failed", "Could not add photo")
 		return
 	}
 	defer tx.Rollback(r.Context())
 	var valid bool
 	if err = tx.QueryRow(r.Context(), "select exists(select 1 from media where id=$1 and storage_space_id=$2 and deleted_at is null)", in.MediaID, spaceID).Scan(&valid); err == nil && valid {
-		_, err = tx.Exec(r.Context(), "delete from item_media where item_id=$1", id)
-	}
-	if err == nil {
-		_, err = tx.Exec(r.Context(), "insert into item_media(item_id,media_id,position,is_cover) values($1,$2,0,true)", id, in.MediaID)
+		_, err = tx.Exec(r.Context(), "insert into item_media(item_id,media_id,position,is_cover) values($1,$2,coalesce((select max(position)+1 from item_media where item_id=$1),0),not exists(select 1 from item_media where item_id=$1)) on conflict do nothing", id, in.MediaID)
 	}
 	if err == nil {
 		_, err = tx.Exec(r.Context(), "update items set updated_at=now() where id=$1", id)
 	}
 	if err != nil || !valid {
-		fail(w, 400, "update_failed", "Could not replace photo")
+		fail(w, 400, "update_failed", "Could not add photo")
 		return
 	}
-	if err = event(r, tx, spaceID, "item", id, "photo_replaced", current(r).ID, map[string]string{"mediaId": in.MediaID}); err != nil || tx.Commit(r.Context()) != nil {
-		fail(w, 500, "update_failed", "Could not replace photo")
+	if err = event(r, tx, spaceID, "item", id, "photo_added", current(r).ID, map[string]string{"mediaId": in.MediaID}); err != nil || tx.Commit(r.Context()) != nil {
+		fail(w, 500, "update_failed", "Could not add photo")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (s *server) reorderItemMedia(w http.ResponseWriter, r *http.Request) {
+	id, spaceID, ok := s.editableEntity(r, "items", "itemID")
+	if !ok || !s.can(r, spaceID, "editor") {
+		fail(w, http.StatusNotFound, "not_found", "Resource not found")
+		return
+	}
+	var in struct{ MediaIDs []string }
+	if !decode(r, &in) {
+		fail(w, 400, "invalid_input", "Invalid photo order")
+		return
+	}
+	tx, err := s.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 500, "transaction_failed", "Could not reorder photos")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	rows, err := tx.Query(r.Context(), "select media_id::text from item_media where item_id=$1", id)
+	if err != nil {
+		fail(w, 500, "query_failed", "Could not reorder photos")
+		return
+	}
+	existing := map[string]bool{}
+	for rows.Next() {
+		var mediaID string
+		_ = rows.Scan(&mediaID)
+		existing[mediaID] = true
+	}
+	rows.Close()
+	if len(in.MediaIDs) != len(existing) {
+		fail(w, 400, "invalid_input", "Photo list does not match item")
+		return
+	}
+	for _, mediaID := range in.MediaIDs {
+		if !existing[mediaID] {
+			fail(w, 400, "invalid_input", "Photo list does not match item")
+			return
+		}
+		delete(existing, mediaID)
+	}
+	for position, mediaID := range in.MediaIDs {
+		if _, err = tx.Exec(r.Context(), "update item_media set position=$1,is_cover=$2 where item_id=$3 and media_id=$4", position, position == 0, id, mediaID); err != nil {
+			fail(w, 500, "update_failed", "Could not reorder photos")
+			return
+		}
+	}
+	if err = event(r, tx, spaceID, "item", id, "photos_reordered", current(r).ID, map[string]any{"mediaIds": in.MediaIDs}); err != nil || tx.Commit(r.Context()) != nil {
+		fail(w, 500, "update_failed", "Could not reorder photos")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+func (s *server) removeItemMedia(w http.ResponseWriter, r *http.Request) {
+	id, spaceID, ok := s.editableEntity(r, "items", "itemID")
+	if !ok || !s.can(r, spaceID, "editor") {
+		fail(w, http.StatusNotFound, "not_found", "Resource not found")
+		return
+	}
+	mediaID := r.PathValue("mediaID")
+	tx, err := s.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 500, "transaction_failed", "Could not remove photo")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	result, err := tx.Exec(r.Context(), "delete from item_media where item_id=$1 and media_id=$2", id, mediaID)
+	if err != nil || result.RowsAffected() != 1 {
+		fail(w, 404, "not_found", "Photo not found on item")
+		return
+	}
+	if _, err = tx.Exec(r.Context(), "with ordered as (select media_id,row_number() over(order by position)-1 as next_position from item_media where item_id=$1) update item_media im set position=ordered.next_position,is_cover=(ordered.next_position=0) from ordered where im.item_id=$1 and im.media_id=ordered.media_id", id); err != nil {
+		fail(w, 500, "update_failed", "Could not remove photo")
+		return
+	}
+	if err = event(r, tx, spaceID, "item", id, "photo_removed", current(r).ID, map[string]string{"mediaId": mediaID}); err != nil || tx.Commit(r.Context()) != nil {
+		fail(w, 500, "update_failed", "Could not remove photo")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -830,7 +914,7 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 		respond(w, 200, []any{})
 		return
 	}
-	rows, e := s.db.Query(r.Context(), "select i.id,i.name,i.description,i.box_id,i.state,count(im.media_id),min(im.media_id::text) filter (where im.is_cover) from items i left join item_media im on im.item_id=i.id where i.storage_space_id=$1 and i.deleted_at is null and (i.search_vector @@ websearch_to_tsquery('simple',$2) or i.name % $2) group by i.id order by similarity(i.name,$2) desc limit 50", space, q)
+	rows, e := s.db.Query(r.Context(), "select i.id,i.name,i.description,i.box_id,i.state,count(im.media_id),coalesce(array_agg(im.media_id::text order by im.position) filter (where im.media_id is not null),'{}') from items i left join item_media im on im.item_id=i.id where i.storage_space_id=$1 and i.deleted_at is null and (i.search_vector @@ websearch_to_tsquery('simple',$2) or i.name % $2) group by i.id order by similarity(i.name,$2) desc limit 50", space, q)
 	if e != nil {
 		fail(w, 500, "query_failed", "Search failed")
 		return
@@ -839,12 +923,17 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 	out := []map[string]any{}
 	for rows.Next() {
 		var id, n, st string
-		var d, b, coverID *string
+		var d, b *string
+		var mediaIDs []string
 		var photos int
-		_ = rows.Scan(&id, &n, &d, &b, &st, &photos, &coverID)
+		_ = rows.Scan(&id, &n, &d, &b, &st, &photos, &mediaIDs)
 		item := map[string]any{"id": id, "name": n, "description": d, "boxId": b, "state": st, "photoCount": photos, "type": "item"}
-		if coverID != nil {
-			item["media"] = []map[string]string{{"id": *coverID, "url": "/api/v1/media/" + *coverID}}
+		if len(mediaIDs) > 0 {
+			media := make([]map[string]string, 0, len(mediaIDs))
+			for _, mediaID := range mediaIDs {
+				media = append(media, map[string]string{"id": mediaID, "url": "/api/v1/media/" + mediaID})
+			}
+			item["media"] = media
 		}
 		out = append(out, item)
 	}

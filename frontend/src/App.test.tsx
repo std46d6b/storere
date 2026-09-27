@@ -82,7 +82,9 @@ describe('App', () => {
 				calls.push({
 					url: request.url,
 					method: request.method,
-					body: request.method === 'PATCH' ? await request.clone().json() : undefined
+					body: ['PATCH', 'POST'].includes(request.method)
+						? await request.clone().json()
+						: undefined
 				})
 				const url = new URL(request.url)
 				const json = (body: unknown, status = 200) =>
@@ -120,8 +122,11 @@ describe('App', () => {
 							name: 'Паспорт',
 							boxId: 'box-1',
 							state: 'active',
-							photoCount: 1,
-							media: [{ id: 'media-1', url: '/api/v1/media/media-1' }]
+							photoCount: 2,
+							media: [
+								{ id: 'media-1', url: '/api/v1/media/media-1' },
+								{ id: 'media-2', url: '/api/v1/media/media-2' }
+							]
 						},
 						{
 							id: 'item-2',
@@ -144,13 +149,20 @@ describe('App', () => {
 							name: 'Паспорт',
 							boxId: 'box-1',
 							state: 'active',
-							photoCount: 1,
-							media: [{ id: 'media-1', url: '/api/v1/media/media-1' }]
+							photoCount: 2,
+							media: [
+								{ id: 'media-1', url: '/api/v1/media/media-1' },
+								{ id: 'media-2', url: '/api/v1/media/media-2' }
+							]
 						}
 					])
 				if (url.pathname.endsWith('/box/box-1/timeline'))
 					return json([{ action: 'created', occurredAt: '2026-09-23T00:00:00Z' }])
 				if (url.pathname.endsWith('/boxes/box-1') && request.method === 'PATCH')
+					return new Response(null, { status: 204 })
+				if (url.pathname.endsWith('/items/item-1/media') && request.method === 'PATCH')
+					return new Response(null, { status: 204 })
+				if (url.pathname.endsWith('/items/item-1/media/media-1') && request.method === 'DELETE')
 					return new Response(null, { status: 204 })
 				if (url.pathname.endsWith('/items/item-1') && request.method === 'PATCH')
 					return new Response(null, { status: 204 })
@@ -190,12 +202,31 @@ describe('App', () => {
 		fireEvent.click(screen.getByRole('button', { name: 'Фильтр по коробке: Без коробки' }))
 		fireEvent.click(screen.getByRole('option', { name: 'Все коробки' }))
 		fireEvent.click(await screen.findByRole('button', { name: /паспорт/i }))
-		const detailPhoto = await screen.findByRole('img', { name: 'Фото вещи: Паспорт' })
+		const detailPhoto = await screen.findByRole('img', { name: 'Фото 1 вещи: Паспорт' })
 		expect(detailPhoto).toHaveAttribute('src', '/api/v1/media/media-1')
 		expect(detailPhoto.parentElement?.parentElement).toHaveClass('item-detail-gallery')
 		fireEvent.click(screen.getByRole('tab', { name: /настройки/i }))
 		const itemBox = screen.getByRole('combobox', { name: 'Коробка' })
 		expect(itemBox).toHaveValue('box-1')
+		expect(screen.getByRole('img', { name: 'Фотография 2' })).toHaveAttribute(
+			'src',
+			'/api/v1/media/media-2'
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Переместить фото 2 раньше' }))
+		await waitFor(() =>
+			expect(calls).toContainEqual(
+				expect.objectContaining({
+					method: 'PATCH',
+					url: expect.stringContaining('/items/item-1/media'),
+					body: { mediaIds: ['media-2', 'media-1'] }
+				})
+			)
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Удалить фото 2' }))
+		expect(
+			screen.getByRole('alertdialog', { name: 'Подтверждение удаления фото' })
+		).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Удалить фото' }))
 		fireEvent.change(itemBox, { target: { value: '' } })
 		fireEvent.click(screen.getByRole('button', { name: 'Сохранить настройки' }))
 		await waitFor(() =>
