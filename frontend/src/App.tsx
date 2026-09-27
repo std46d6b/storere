@@ -481,11 +481,17 @@ function EntityDialog({
 							) : (
 								<p className="muted">В этой коробке пока нет вещей.</p>
 							)
+						) : entity.kind === 'item' ? (
+							(current as Item).media?.[0] ? (
+								<div className="item-detail-photo">
+									<img src={(current as Item).media![0].url} alt={`Фото вещи: ${current.name}`} />
+								</div>
+							) : (
+								<p className="muted">Фото: {(current as Item).photoCount}.</p>
+							)
 						) : (
 							<p className="muted">
-								{entity.kind === 'item'
-									? `Фото: ${(current as Item).photoCount}.`
-									: 'Откройте настройки, чтобы изменить название, описание или флаги.'}
+								Откройте настройки, чтобы изменить название, описание или флаги.
 							</p>
 						)}
 					</section>

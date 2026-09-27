@@ -134,6 +134,12 @@ describe('App', () => {
 		expect(screen.getByRole('button', { name: 'Выйти' }).previousElementSibling).toHaveTextContent(
 			'Misha · @misha'
 		)
+		fireEvent.click(await screen.findByRole('button', { name: /паспорт/i }))
+		expect(await screen.findByRole('img', { name: 'Фото вещи: Паспорт' })).toHaveAttribute(
+			'src',
+			'/api/v1/media/media-1'
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
 		fireEvent.click(screen.getByRole('button', { name: /коробки/i }))
 		await screen.findByRole('button', { name: /архив/i })
 		fireEvent.click(screen.getByRole('button', { name: /архив/i }))
