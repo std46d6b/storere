@@ -219,8 +219,16 @@ function CreateSpaceDialog({ onClose }: { onClose: () => void }) {
 	)
 }
 
-function AddDialog({ space, onClose }: { space: Space; onClose: () => void }) {
-	const [kind, setKind] = useState<'menu' | 'item' | 'box' | 'location'>('menu')
+function AddDialog({
+	space,
+	initialKind,
+	onClose
+}: {
+	space: Space
+	initialKind: 'item' | 'box' | 'location'
+	onClose: () => void
+}) {
+	const [kind, setKind] = useState<'menu' | 'item' | 'box' | 'location'>(initialKind)
 	const [media, setMedia] = useState<Media | null>(null)
 	const [uploadMedia, uploadState] = useUploadMediaMutation()
 	const [createItem, itemState] = useCreateItemMutation()
@@ -1088,7 +1096,13 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 			<button className="fab" aria-label="Быстрое создание" onClick={() => setAdding(true)}>
 				＋
 			</button>
-			{adding && <AddDialog space={activeSpace} onClose={() => setAdding(false)} />}
+			{adding && (
+				<AddDialog
+					space={activeSpace}
+					initialKind={view === 'items' ? 'item' : view === 'boxes' ? 'box' : 'location'}
+					onClose={() => setAdding(false)}
+				/>
+			)}
 			{selected && (
 				<EntityDialog
 					entity={selected}

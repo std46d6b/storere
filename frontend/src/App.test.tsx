@@ -178,6 +178,18 @@ describe('App', () => {
 			</Provider>
 		)
 		await screen.findByRole('heading', { name: /мои вещи/i })
+		fireEvent.click(screen.getByRole('button', { name: /добавить/i }))
+		expect(screen.getByRole('heading', { name: 'Новая вещь' })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+		fireEvent.click(screen.getByRole('button', { name: '▣ Коробки' }))
+		fireEvent.click(screen.getByRole('button', { name: /добавить/i }))
+		expect(screen.getByRole('heading', { name: 'Новая коробка' })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+		fireEvent.click(screen.getByRole('button', { name: '⌖ Места' }))
+		fireEvent.click(screen.getByRole('button', { name: /добавить/i }))
+		expect(screen.getByRole('heading', { name: 'Новая локация' })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+		fireEvent.click(screen.getByRole('button', { name: '⌕ Вещи' }))
 		expect(screen.getByText('Misha · @misha')).toBeInTheDocument()
 		expect(screen.getByRole('button', { name: 'Выйти' }).previousElementSibling).toHaveTextContent(
 			'Misha · @misha'
