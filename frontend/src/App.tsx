@@ -1,50 +1,910 @@
 import { FormEvent, useState } from 'react'
 import {
-  ApiError, Box, Item, Location, Media, Space,
-  useBoxesQuery, useCreateBoxMutation, useCreateItemMutation, useCreateLocationMutation,
-  useCreateSpaceMutation, useItemsQuery, useLocationsQuery, useLoginMutation,
-  useLogoutMutation, useMeQuery, useMoveBoxMutation, useRegisterMutation, useSearchQuery,
-  useSpacesQuery, useTimelineQuery, useUpdateBoxMutation, useUpdateItemMutation, useDeleteItemMutation, useDeleteBoxMutation, useDeleteLocationMutation, useReplaceItemMediaMutation,
-  useUpdateLocationMutation, useUploadMediaMutation
+	ApiError,
+	Box,
+	Item,
+	Location,
+	Media,
+	Space,
+	useBoxesQuery,
+	useCreateBoxMutation,
+	useCreateItemMutation,
+	useCreateLocationMutation,
+	useCreateSpaceMutation,
+	useItemsQuery,
+	useLocationsQuery,
+	useLoginMutation,
+	useLogoutMutation,
+	useMeQuery,
+	useMoveBoxMutation,
+	useRegisterMutation,
+	useSearchQuery,
+	useSpacesQuery,
+	useTimelineQuery,
+	useUpdateBoxMutation,
+	useUpdateItemMutation,
+	useDeleteItemMutation,
+	useDeleteBoxMutation,
+	useDeleteLocationMutation,
+	useReplaceItemMediaMutation,
+	useUpdateLocationMutation,
+	useUploadMediaMutation
 } from './api/api'
 
-type Entity = { kind: 'item'; value: Item } | { kind: 'box'; value: Box } | { kind: 'location'; value: Location }
-function message(error: unknown) { return (error as { data?: ApiError })?.data?.message ?? 'Не удалось выполнить запрос. Попробуйте ещё раз.' }
+type Entity =
+	| { kind: 'item'; value: Item }
+	| { kind: 'box'; value: Box }
+	| { kind: 'location'; value: Location }
+function message(error: unknown) {
+	return (
+		(error as { data?: ApiError })?.data?.message ??
+		'Не удалось выполнить запрос. Попробуйте ещё раз.'
+	)
+}
 function stateMeta(state: string) {
-  if (state === 'deleted') return { icon: '×', label: 'Удалено' }
-  if (state === 'temporarily_removed') return { icon: '⌛', label: 'Временно убрано' }
-  if (state === 'archived') return { icon: '▧', label: 'В архиве' }
-  return { icon: '●', label: 'Активно' }
+	if (state === 'deleted') return { icon: '×', label: 'Удалено' }
+	if (state === 'temporarily_removed') return { icon: '⌛', label: 'Временно убрано' }
+	if (state === 'archived') return { icon: '▧', label: 'В архиве' }
+	return { icon: '●', label: 'Активно' }
 }
 
 function AuthPage() {
-  const [registering, setRegistering] = useState(false); const [login, loginState] = useLoginMutation(); const [register, registerState] = useRegisterMutation(); const pending = loginState.isLoading || registerState.isLoading
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); const username = String(form.get('username') ?? ''); const password = String(form.get('password') ?? ''); if (registering) await register({ username, password, displayName: String(form.get('displayName') ?? '') }).unwrap(); else await login({ username, password }).unwrap() }
-  return <main className="auth-page"><section className="auth-card" aria-labelledby="auth-title"><strong className="brand">storere</strong><p className="eyebrow">ЛИЧНЫЙ ИНВЕНТАРЬ</p><h1 id="auth-title">{registering ? 'Создать аккаунт' : 'Войти'}</h1><p className="muted">Храните вещи, коробки и места в одном понятном каталоге.</p><form onSubmit={submit}>{registering && <label>Отображаемое имя<input name="displayName" required autoComplete="name" /></label>}<label>Имя пользователя<input name="username" required minLength={3} autoComplete="username" /></label><label>Пароль<input name="password" required minLength={12} type="password" autoComplete={registering ? 'new-password' : 'current-password'} /></label>{(loginState.error || registerState.error) && <p role="alert" className="form-error">{message(loginState.error || registerState.error)}</p>}<button className="primary wide" disabled={pending}>{pending ? 'Подождите…' : registering ? 'Зарегистрироваться' : 'Войти'}</button></form><button className="link-button" onClick={() => setRegistering(!registering)}>{registering ? 'У меня уже есть аккаунт' : 'Создать аккаунт'}</button></section></main>
+	const [registering, setRegistering] = useState(false)
+	const [login, loginState] = useLoginMutation()
+	const [register, registerState] = useRegisterMutation()
+	const pending = loginState.isLoading || registerState.isLoading
+	async function submit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+		const form = new FormData(event.currentTarget)
+		const username = String(form.get('username') ?? '')
+		const password = String(form.get('password') ?? '')
+		if (registering)
+			await register({
+				username,
+				password,
+				displayName: String(form.get('displayName') ?? '')
+			}).unwrap()
+		else await login({ username, password }).unwrap()
+	}
+	return (
+		<main className="auth-page">
+			<section className="auth-card" aria-labelledby="auth-title">
+				<strong className="brand">storere</strong>
+				<p className="eyebrow">ЛИЧНЫЙ ИНВЕНТАРЬ</p>
+				<h1 id="auth-title">{registering ? 'Создать аккаунт' : 'Войти'}</h1>
+				<p className="muted">Храните вещи, коробки и места в одном понятном каталоге.</p>
+				<form onSubmit={submit}>
+					{registering && (
+						<label>
+							Отображаемое имя
+							<input name="displayName" required autoComplete="name" />
+						</label>
+					)}
+					<label>
+						Имя пользователя
+						<input name="username" required minLength={3} autoComplete="username" />
+					</label>
+					<label>
+						Пароль
+						<input
+							name="password"
+							required
+							minLength={12}
+							type="password"
+							autoComplete={registering ? 'new-password' : 'current-password'}
+						/>
+					</label>
+					{(loginState.error || registerState.error) && (
+						<p role="alert" className="form-error">
+							{message(loginState.error || registerState.error)}
+						</p>
+					)}
+					<button className="primary wide" disabled={pending}>
+						{pending ? 'Подождите…' : registering ? 'Зарегистрироваться' : 'Войти'}
+					</button>
+				</form>
+				<button className="link-button" onClick={() => setRegistering(!registering)}>
+					{registering ? 'У меня уже есть аккаунт' : 'Создать аккаунт'}
+				</button>
+			</section>
+		</main>
+	)
 }
-function SpaceSetup() { const [createSpace, state] = useCreateSpaceMutation(); async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); await createSpace({ name: String(form.get('name')), description: String(form.get('description') || ''), address: String(form.get('address') || '') }).unwrap() }; return <section className="empty setup"><p className="eyebrow">ПЕРВОЕ ПРОСТРАНСТВО</p><h1>Где находятся ваши вещи?</h1><p>Например, «Квартира на Лесной» или «Дача».</p><form onSubmit={submit}><label>Название<input name="name" required autoFocus /></label><label>Описание<textarea name="description" /></label><label>Адрес <span className="muted">(необязательно)</span><input name="address" /></label>{state.error && <p role="alert" className="form-error">{message(state.error)}</p>}<button className="primary" disabled={state.isLoading}>Создать пространство</button></form></section> }
-function PhotoViewer({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) { return <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={alt} onClick={onClose}><button className="photo-close" aria-label="Закрыть фото" onClick={onClose}>×</button><img src={src} alt={alt} onClick={(event) => event.stopPropagation()} /></div> }
-function CreateSpaceDialog({ onClose }: { onClose: () => void }) { const [createSpace, state] = useCreateSpaceMutation(); async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); await createSpace({ name: String(form.get('name')), description: String(form.get('description') || ''), address: String(form.get('address') || '') }).unwrap(); onClose() } return <div className="backdrop" onMouseDown={onClose}><form className="dialog" role="dialog" aria-modal="true" aria-labelledby="space-title" onMouseDown={(event) => event.stopPropagation()} onSubmit={submit}><button className="close" onClick={onClose} aria-label="Закрыть">×</button><p className="eyebrow">ПРОСТРАНСТВО</p><h2 id="space-title">Добавить пространство</h2><label>Название<input name="name" required autoFocus /></label><label>Описание<textarea name="description" /></label><label>Адрес<input name="address" /></label>{state.error && <p role="alert" className="form-error">{message(state.error)}</p>}<button className="primary" disabled={state.isLoading}>{state.isLoading ? 'Создаём…' : 'Добавить'}</button></form></div> }
+function SpaceSetup() {
+	const [createSpace, state] = useCreateSpaceMutation()
+	async function submit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+		const form = new FormData(event.currentTarget)
+		await createSpace({
+			name: String(form.get('name')),
+			description: String(form.get('description') || ''),
+			address: String(form.get('address') || '')
+		}).unwrap()
+	}
+	return (
+		<section className="empty setup">
+			<p className="eyebrow">ПЕРВОЕ ПРОСТРАНСТВО</p>
+			<h1>Где находятся ваши вещи?</h1>
+			<p>Например, «Квартира на Лесной» или «Дача».</p>
+			<form onSubmit={submit}>
+				<label>
+					Название
+					<input name="name" required autoFocus />
+				</label>
+				<label>
+					Описание
+					<textarea name="description" />
+				</label>
+				<label>
+					Адрес <span className="muted">(необязательно)</span>
+					<input name="address" />
+				</label>
+				{state.error && (
+					<p role="alert" className="form-error">
+						{message(state.error)}
+					</p>
+				)}
+				<button className="primary" disabled={state.isLoading}>
+					Создать пространство
+				</button>
+			</form>
+		</section>
+	)
+}
+function PhotoViewer({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+	return (
+		<div
+			className="photo-viewer"
+			role="dialog"
+			aria-modal="true"
+			aria-label={alt}
+			onClick={onClose}>
+			<button className="photo-close" aria-label="Закрыть фото" onClick={onClose}>
+				×
+			</button>
+			<img src={src} alt={alt} onClick={(event) => event.stopPropagation()} />
+		</div>
+	)
+}
+function CreateSpaceDialog({ onClose }: { onClose: () => void }) {
+	const [createSpace, state] = useCreateSpaceMutation()
+	async function submit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+		const form = new FormData(event.currentTarget)
+		await createSpace({
+			name: String(form.get('name')),
+			description: String(form.get('description') || ''),
+			address: String(form.get('address') || '')
+		}).unwrap()
+		onClose()
+	}
+	return (
+		<div className="backdrop" onMouseDown={onClose}>
+			<form
+				className="dialog"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="space-title"
+				onMouseDown={(event) => event.stopPropagation()}
+				onSubmit={submit}>
+				<button className="close" onClick={onClose} aria-label="Закрыть">
+					×
+				</button>
+				<p className="eyebrow">ПРОСТРАНСТВО</p>
+				<h2 id="space-title">Добавить пространство</h2>
+				<label>
+					Название
+					<input name="name" required autoFocus />
+				</label>
+				<label>
+					Описание
+					<textarea name="description" />
+				</label>
+				<label>
+					Адрес
+					<input name="address" />
+				</label>
+				{state.error && (
+					<p role="alert" className="form-error">
+						{message(state.error)}
+					</p>
+				)}
+				<button className="primary" disabled={state.isLoading}>
+					{state.isLoading ? 'Создаём…' : 'Добавить'}
+				</button>
+			</form>
+		</div>
+	)
+}
 
 function AddDialog({ space, onClose }: { space: Space; onClose: () => void }) {
-  const [kind, setKind] = useState<'menu' | 'item' | 'box' | 'location'>('menu'); const [media, setMedia] = useState<Media | null>(null); const [uploadMedia, uploadState] = useUploadMediaMutation(); const [createItem, itemState] = useCreateItemMutation(); const [createBox, boxState] = useCreateBoxMutation(); const [createLocation, locationState] = useCreateLocationMutation(); const { data: locations = [] } = useLocationsQuery(space.id); const { data: boxes = [] } = useBoxesQuery(space.id); const state = kind === 'item' ? itemState : kind === 'box' ? boxState : locationState
-  async function upload(file?: File) { if (file) setMedia(await uploadMedia({ spaceId: space.id, file }).unwrap()) }
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); if (kind === 'location') await createLocation({ spaceId: space.id, name: String(form.get('name')), code: String(form.get('code') || ''), description: String(form.get('description') || '') }).unwrap(); if (kind === 'box') await createBox({ spaceId: space.id, name: String(form.get('name')), description: String(form.get('description') || ''), locationId: String(form.get('locationId') || '') }).unwrap(); if (kind === 'item' && media) await createItem({ spaceId: space.id, name: String(form.get('name')), description: String(form.get('description') || ''), boxId: String(form.get('boxId') || ''), mediaIds: [media.id] }).unwrap(); onClose() }
-  return <div className="backdrop" onMouseDown={onClose}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="add-title" onMouseDown={(event) => event.stopPropagation()}><button className="close" onClick={onClose} aria-label="Закрыть">×</button>{kind === 'menu' ? <><p className="eyebrow">БЫСТРОЕ ДОБАВЛЕНИЕ</p><h2 id="add-title">Что добавить?</h2><button className="choice" onClick={() => setKind('item')}>▧ <span><b>Вещь</b><small>Фото обязательно</small></span></button><button className="choice" onClick={() => setKind('box')}>□ <span><b>Коробку</b><small>Контейнер для вещей</small></span></button><button className="choice" onClick={() => setKind('location')}>⌖ <span><b>Место</b><small>Балкон, полка, комната</small></span></button></> : <form onSubmit={submit}><p className="eyebrow">ДОБАВЛЕНИЕ</p><h2 id="add-title">Новая {kind === 'item' ? 'вещь' : kind === 'box' ? 'коробка' : 'локация'}</h2><label>Название<input name="name" required autoFocus /></label><label>Описание<textarea name="description" /></label>{kind === 'location' && <label>Код<input name="code" placeholder="kitchen" /></label>}{kind === 'box' && <label>Место<select name="locationId"><option value="">Не указано</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>}{kind === 'item' && <><label>Коробка<select name="boxId"><option value="">Без коробки</option>{boxes.map((box) => <option key={box.id} value={box.id}>{box.name}</option>)}</select></label><label>Фотография<input aria-label="Фотография" type="file" accept="image/jpeg,image/png,image/webp" required={!media} onChange={(event) => upload(event.currentTarget.files?.[0])} /></label>{media && <img className="upload-preview" src={media.url} alt="Загруженное фото" />}{uploadState.error && <p role="alert" className="form-error">{message(uploadState.error)}</p>}</>}{state.error && <p role="alert" className="form-error">{message(state.error)}</p>}<button className="primary" disabled={state.isLoading || (kind === 'item' && !media)}>Создать</button></form>}</section></div>
+	const [kind, setKind] = useState<'menu' | 'item' | 'box' | 'location'>('menu')
+	const [media, setMedia] = useState<Media | null>(null)
+	const [uploadMedia, uploadState] = useUploadMediaMutation()
+	const [createItem, itemState] = useCreateItemMutation()
+	const [createBox, boxState] = useCreateBoxMutation()
+	const [createLocation, locationState] = useCreateLocationMutation()
+	const { data: locations = [] } = useLocationsQuery(space.id)
+	const { data: boxes = [] } = useBoxesQuery(space.id)
+	const state = kind === 'item' ? itemState : kind === 'box' ? boxState : locationState
+	async function upload(file?: File) {
+		if (file) setMedia(await uploadMedia({ spaceId: space.id, file }).unwrap())
+	}
+	async function submit(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+		const form = new FormData(event.currentTarget)
+		if (kind === 'location')
+			await createLocation({
+				spaceId: space.id,
+				name: String(form.get('name')),
+				code: String(form.get('code') || ''),
+				description: String(form.get('description') || '')
+			}).unwrap()
+		if (kind === 'box')
+			await createBox({
+				spaceId: space.id,
+				name: String(form.get('name')),
+				description: String(form.get('description') || ''),
+				locationId: String(form.get('locationId') || '')
+			}).unwrap()
+		if (kind === 'item' && media)
+			await createItem({
+				spaceId: space.id,
+				name: String(form.get('name')),
+				description: String(form.get('description') || ''),
+				boxId: String(form.get('boxId') || ''),
+				mediaIds: [media.id]
+			}).unwrap()
+		onClose()
+	}
+	return (
+		<div className="backdrop" onMouseDown={onClose}>
+			<section
+				className="dialog"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="add-title"
+				onMouseDown={(event) => event.stopPropagation()}>
+				<button className="close" onClick={onClose} aria-label="Закрыть">
+					×
+				</button>
+				{kind === 'menu' ? (
+					<>
+						<p className="eyebrow">БЫСТРОЕ ДОБАВЛЕНИЕ</p>
+						<h2 id="add-title">Что добавить?</h2>
+						<button className="choice" onClick={() => setKind('item')}>
+							▧{' '}
+							<span>
+								<b>Вещь</b>
+								<small>Фото обязательно</small>
+							</span>
+						</button>
+						<button className="choice" onClick={() => setKind('box')}>
+							□{' '}
+							<span>
+								<b>Коробку</b>
+								<small>Контейнер для вещей</small>
+							</span>
+						</button>
+						<button className="choice" onClick={() => setKind('location')}>
+							⌖{' '}
+							<span>
+								<b>Место</b>
+								<small>Балкон, полка, комната</small>
+							</span>
+						</button>
+					</>
+				) : (
+					<form onSubmit={submit}>
+						<p className="eyebrow">ДОБАВЛЕНИЕ</p>
+						<h2 id="add-title">
+							Новая {kind === 'item' ? 'вещь' : kind === 'box' ? 'коробка' : 'локация'}
+						</h2>
+						<label>
+							Название
+							<input name="name" required autoFocus />
+						</label>
+						<label>
+							Описание
+							<textarea name="description" />
+						</label>
+						{kind === 'location' && (
+							<label>
+								Код
+								<input name="code" placeholder="kitchen" />
+							</label>
+						)}
+						{kind === 'box' && (
+							<label>
+								Место
+								<select name="locationId">
+									<option value="">Не указано</option>
+									{locations.map((location) => (
+										<option key={location.id} value={location.id}>
+											{location.name}
+										</option>
+									))}
+								</select>
+							</label>
+						)}
+						{kind === 'item' && (
+							<>
+								<label>
+									Коробка
+									<select name="boxId">
+										<option value="">Без коробки</option>
+										{boxes.map((box) => (
+											<option key={box.id} value={box.id}>
+												{box.name}
+											</option>
+										))}
+									</select>
+								</label>
+								<label>
+									Фотография
+									<input
+										aria-label="Фотография"
+										type="file"
+										accept="image/jpeg,image/png,image/webp"
+										required={!media}
+										onChange={(event) => upload(event.currentTarget.files?.[0])}
+									/>
+								</label>
+								{media && <img className="upload-preview" src={media.url} alt="Загруженное фото" />}
+								{uploadState.error && (
+									<p role="alert" className="form-error">
+										{message(uploadState.error)}
+									</p>
+								)}
+							</>
+						)}
+						{state.error && (
+							<p role="alert" className="form-error">
+								{message(state.error)}
+							</p>
+						)}
+						<button className="primary" disabled={state.isLoading || (kind === 'item' && !media)}>
+							Создать
+						</button>
+					</form>
+				)}
+			</section>
+		</div>
+	)
 }
 
-function EntityDialog({ entity, locations, items, spaceId, onClose }: { entity: Entity; locations: Location[]; items: Item[]; spaceId: string; onClose: () => void }) {
-  const [tab, setTab] = useState<'overview' | 'history' | 'settings'>('overview'); const [expanded, setExpanded] = useState(false); const { data: history = [], isLoading: historyLoading, error: historyError } = useTimelineQuery({ entity: entity.kind, id: entity.value.id }, { skip: tab !== 'history' }); const [updateItem, itemState] = useUpdateItemMutation(); const [updateBox, boxState] = useUpdateBoxMutation(); const [updateLocation, locationState] = useUpdateLocationMutation(); const [moveBox, moveState] = useMoveBoxMutation(); const [deleteItem, deleteItemState] = useDeleteItemMutation(); const [deleteBox, deleteBoxState] = useDeleteBoxMutation(); const [deleteLocation, deleteLocationState] = useDeleteLocationMutation(); const [confirmDelete, setConfirmDelete] = useState(false); const [uploadMedia, uploadState] = useUploadMediaMutation(); const [replaceItemMedia, replaceMediaState] = useReplaceItemMediaMutation(); const [replacement, setReplacement] = useState<Media | null>(null); const current = entity.value; const error = itemState.error || boxState.error || locationState.error || moveState.error; const saving = itemState.isLoading || boxState.isLoading || locationState.isLoading || moveState.isLoading; const kindLabel = entity.kind === 'item' ? 'Вещь' : entity.kind === 'box' ? 'Коробка' : 'Локация'
-  async function save(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); const body = { name: String(form.get('name')), description: String(form.get('description') || ''), state: String(form.get('state')) }; if (entity.kind === 'item') { await updateItem({ id: current.id, ...body }).unwrap(); if (replacement) await replaceItemMedia({ id: current.id, mediaId: replacement.id }).unwrap() } if (entity.kind === 'location') await updateLocation({ id: current.id, ...body }).unwrap(); if (entity.kind === 'box') { await updateBox({ id: current.id, ...body }).unwrap(); await moveBox({ id: current.id, locationId: String(form.get('locationId') || '') }).unwrap() } }
-  const boxItems = entity.kind === 'box' ? items.filter((item) => item.boxId === current.id) : []
-  return <div className="backdrop" onMouseDown={onClose}><section className={`dialog entity-dialog${expanded ? ' expanded' : ''}`} role="dialog" aria-modal="true" aria-labelledby="entity-title" onMouseDown={(event) => event.stopPropagation()}><button className="close" onClick={onClose} aria-label="Закрыть">×</button><button className="resize-dialog" onClick={() => setExpanded(!expanded)} aria-label={expanded ? 'Сузить карточку' : 'Развернуть карточку'}>{expanded ? 'Сузить' : 'Развернуть'}</button><p className="eyebrow">{kindLabel.toUpperCase()}</p><h2 id="entity-title">{current.name}</h2><p className="muted">{current.description || 'Без описания'}</p><div className="tabs" role="tablist" aria-label={`${kindLabel} разделы`}><button role="tab" aria-selected={tab === 'overview'} onClick={() => setTab('overview')}>Содержимое</button><button role="tab" aria-selected={tab === 'history'} onClick={() => setTab('history')}>История</button><button role="tab" aria-selected={tab === 'settings'} onClick={() => setTab('settings')}>Настройки</button></div>{tab === 'overview' && <section className="detail-panel">{entity.kind === 'box' ? boxItems.length ? <ul className="contents-list">{boxItems.map((item) => <li key={item.id} className="content-item">{item.media?.[0] ? <img src={item.media[0].url} alt={item.name} /> : <span className="content-item-placeholder">▧</span>}<span><b>{item.name}</b><small>{item.description || 'Без описания'}</small></span></li>)}</ul> : <p className="muted">В этой коробке пока нет вещей.</p> : <p className="muted">{entity.kind === 'item' ? `Фото: ${(current as Item).photoCount}.` : 'Откройте настройки, чтобы изменить название, описание или флаги.'}</p>}</section>}{tab === 'history' && <section className="detail-panel">{historyLoading ? <p role="status">Загружаем историю…</p> : historyError ? <p role="alert" className="form-error">{message(historyError)}</p> : history.length ? <ul className="history-list">{history.map((event, index) => <li key={`${event.occurredAt}-${index}`}><b>{event.action}</b><time>{new Date(event.occurredAt).toLocaleString('ru-RU')}</time></li>)}</ul> : <p className="muted">История пока пуста.</p>}</section>}{tab === 'settings' && <form className="detail-panel" onSubmit={save}><label>Название<input name="name" required defaultValue={current.name} /></label><label>Описание<textarea name="description" defaultValue={current.description || ''} /></label><label>Флаг<select name="state" defaultValue={current.state}><option value="active">Активно</option><option value="temporarily_removed">Временно убрано</option><option value="archived">В архиве</option></select></label>{entity.kind === 'item' && <label>Заменить фотографию<input aria-label="Заменить фотографию" type="file" accept="image/jpeg,image/png,image/webp" onChange={async (event) => { const file = event.currentTarget.files?.[0]; if (file) setReplacement(await uploadMedia({ spaceId, file }).unwrap()) }} />{replacement && <img className="upload-preview" src={replacement.url} alt="Новая фотография" />}</label>}{entity.kind === 'box' && <label>Текущее место<select name="locationId" defaultValue={(current as Box).currentLocationId || ''}><option value="">Не указано</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>}{error && <p role="alert" className="form-error">{message(error)}</p>}<button className="primary" disabled={saving}>{entity.kind === 'box' ? 'Сохранить место' : 'Сохранить настройки'}</button><button type="button" className="delete-button" onClick={() => setConfirmDelete(true)}>Удалить {kindLabel.toLowerCase()}</button>{confirmDelete && <div className="delete-confirm"><p>Удалить «{current.name}»? Карточка будет деактивирована и доступна через фильтр «Удалённые».</p><div><button type="button" onClick={() => setConfirmDelete(false)}>Отмена</button><button type="button" className="delete-button" disabled={deleteItemState.isLoading || deleteBoxState.isLoading || deleteLocationState.isLoading} onClick={async () => { if (entity.kind === 'item') await deleteItem(current.id).unwrap(); if (entity.kind === 'box') await deleteBox(current.id).unwrap(); if (entity.kind === 'location') await deleteLocation(current.id).unwrap(); onClose() }}>Подтвердить удаление</button></div></div>}</form>}</section></div>
+function EntityDialog({
+	entity,
+	locations,
+	items,
+	spaceId,
+	onClose
+}: {
+	entity: Entity
+	locations: Location[]
+	items: Item[]
+	spaceId: string
+	onClose: () => void
+}) {
+	const [tab, setTab] = useState<'overview' | 'history' | 'settings'>('overview')
+	const [expanded, setExpanded] = useState(false)
+	const {
+		data: history = [],
+		isLoading: historyLoading,
+		error: historyError
+	} = useTimelineQuery({ entity: entity.kind, id: entity.value.id }, { skip: tab !== 'history' })
+	const [updateItem, itemState] = useUpdateItemMutation()
+	const [updateBox, boxState] = useUpdateBoxMutation()
+	const [updateLocation, locationState] = useUpdateLocationMutation()
+	const [moveBox, moveState] = useMoveBoxMutation()
+	const [deleteItem, deleteItemState] = useDeleteItemMutation()
+	const [deleteBox, deleteBoxState] = useDeleteBoxMutation()
+	const [deleteLocation, deleteLocationState] = useDeleteLocationMutation()
+	const [confirmDelete, setConfirmDelete] = useState(false)
+	const [uploadMedia, uploadState] = useUploadMediaMutation()
+	const [replaceItemMedia, replaceMediaState] = useReplaceItemMediaMutation()
+	const [replacement, setReplacement] = useState<Media | null>(null)
+	const current = entity.value
+	const error = itemState.error || boxState.error || locationState.error || moveState.error
+	const saving =
+		itemState.isLoading || boxState.isLoading || locationState.isLoading || moveState.isLoading
+	const kindLabel = entity.kind === 'item' ? 'Вещь' : entity.kind === 'box' ? 'Коробка' : 'Локация'
+	async function save(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+		const form = new FormData(event.currentTarget)
+		const body = {
+			name: String(form.get('name')),
+			description: String(form.get('description') || ''),
+			state: String(form.get('state'))
+		}
+		if (entity.kind === 'item') {
+			await updateItem({ id: current.id, ...body }).unwrap()
+			if (replacement) await replaceItemMedia({ id: current.id, mediaId: replacement.id }).unwrap()
+		}
+		if (entity.kind === 'location') await updateLocation({ id: current.id, ...body }).unwrap()
+		if (entity.kind === 'box') {
+			await updateBox({ id: current.id, ...body }).unwrap()
+			await moveBox({ id: current.id, locationId: String(form.get('locationId') || '') }).unwrap()
+		}
+	}
+	const boxItems = entity.kind === 'box' ? items.filter((item) => item.boxId === current.id) : []
+	return (
+		<div className="backdrop" onMouseDown={onClose}>
+			<section
+				className={`dialog entity-dialog${expanded ? ' expanded' : ''}`}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="entity-title"
+				onMouseDown={(event) => event.stopPropagation()}>
+				<button className="close" onClick={onClose} aria-label="Закрыть">
+					×
+				</button>
+				<button
+					className="resize-dialog"
+					onClick={() => setExpanded(!expanded)}
+					aria-label={expanded ? 'Сузить карточку' : 'Развернуть карточку'}>
+					{expanded ? 'Сузить' : 'Развернуть'}
+				</button>
+				<p className="eyebrow">{kindLabel.toUpperCase()}</p>
+				<h2 id="entity-title">{current.name}</h2>
+				<p className="muted">{current.description || 'Без описания'}</p>
+				<div className="tabs" role="tablist" aria-label={`${kindLabel} разделы`}>
+					<button role="tab" aria-selected={tab === 'overview'} onClick={() => setTab('overview')}>
+						Содержимое
+					</button>
+					<button role="tab" aria-selected={tab === 'history'} onClick={() => setTab('history')}>
+						История
+					</button>
+					<button role="tab" aria-selected={tab === 'settings'} onClick={() => setTab('settings')}>
+						Настройки
+					</button>
+				</div>
+				{tab === 'overview' && (
+					<section className="detail-panel">
+						{entity.kind === 'box' ? (
+							boxItems.length ? (
+								<ul className="contents-list">
+									{boxItems.map((item) => (
+										<li key={item.id} className="content-item">
+											{item.media?.[0] ? (
+												<img src={item.media[0].url} alt={item.name} />
+											) : (
+												<span className="content-item-placeholder">▧</span>
+											)}
+											<span>
+												<b>{item.name}</b>
+												<small>{item.description || 'Без описания'}</small>
+											</span>
+										</li>
+									))}
+								</ul>
+							) : (
+								<p className="muted">В этой коробке пока нет вещей.</p>
+							)
+						) : (
+							<p className="muted">
+								{entity.kind === 'item'
+									? `Фото: ${(current as Item).photoCount}.`
+									: 'Откройте настройки, чтобы изменить название, описание или флаги.'}
+							</p>
+						)}
+					</section>
+				)}
+				{tab === 'history' && (
+					<section className="detail-panel">
+						{historyLoading ? (
+							<p role="status">Загружаем историю…</p>
+						) : historyError ? (
+							<p role="alert" className="form-error">
+								{message(historyError)}
+							</p>
+						) : history.length ? (
+							<ul className="history-list">
+								{history.map((event, index) => (
+									<li key={`${event.occurredAt}-${index}`}>
+										<b>{event.action}</b>
+										<time>{new Date(event.occurredAt).toLocaleString('ru-RU')}</time>
+									</li>
+								))}
+							</ul>
+						) : (
+							<p className="muted">История пока пуста.</p>
+						)}
+					</section>
+				)}
+				{tab === 'settings' && (
+					<form className="detail-panel" onSubmit={save}>
+						<label>
+							Название
+							<input name="name" required defaultValue={current.name} />
+						</label>
+						<label>
+							Описание
+							<textarea name="description" defaultValue={current.description || ''} />
+						</label>
+						<label>
+							Флаг
+							<select name="state" defaultValue={current.state}>
+								<option value="active">Активно</option>
+								<option value="temporarily_removed">Временно убрано</option>
+								<option value="archived">В архиве</option>
+							</select>
+						</label>
+						{entity.kind === 'item' && (
+							<label>
+								Заменить фотографию
+								<input
+									aria-label="Заменить фотографию"
+									type="file"
+									accept="image/jpeg,image/png,image/webp"
+									onChange={async (event) => {
+										const file = event.currentTarget.files?.[0]
+										if (file) setReplacement(await uploadMedia({ spaceId, file }).unwrap())
+									}}
+								/>
+								{replacement && (
+									<img className="upload-preview" src={replacement.url} alt="Новая фотография" />
+								)}
+							</label>
+						)}
+						{entity.kind === 'box' && (
+							<label>
+								Текущее место
+								<select name="locationId" defaultValue={(current as Box).currentLocationId || ''}>
+									<option value="">Не указано</option>
+									{locations.map((location) => (
+										<option key={location.id} value={location.id}>
+											{location.name}
+										</option>
+									))}
+								</select>
+							</label>
+						)}
+						{error && (
+							<p role="alert" className="form-error">
+								{message(error)}
+							</p>
+						)}
+						<button className="primary" disabled={saving}>
+							{entity.kind === 'box' ? 'Сохранить место' : 'Сохранить настройки'}
+						</button>
+						<button type="button" className="delete-button" onClick={() => setConfirmDelete(true)}>
+							Удалить {kindLabel.toLowerCase()}
+						</button>
+						{confirmDelete && (
+							<div className="delete-confirm">
+								<p>
+									Удалить «{current.name}»? Карточка будет деактивирована и доступна через фильтр
+									«Удалённые».
+								</p>
+								<div>
+									<button type="button" onClick={() => setConfirmDelete(false)}>
+										Отмена
+									</button>
+									<button
+										type="button"
+										className="delete-button"
+										disabled={
+											deleteItemState.isLoading ||
+											deleteBoxState.isLoading ||
+											deleteLocationState.isLoading
+										}
+										onClick={async () => {
+											if (entity.kind === 'item') await deleteItem(current.id).unwrap()
+											if (entity.kind === 'box') await deleteBox(current.id).unwrap()
+											if (entity.kind === 'location') await deleteLocation(current.id).unwrap()
+											onClose()
+										}}>
+										Подтвердить удаление
+									</button>
+								</div>
+							</div>
+						)}
+					</form>
+				)}
+			</section>
+		</div>
+	)
 }
 
 function Inventory({ user }: { user: { username: string; displayName: string } }) {
-  const { data: spaces = [], isLoading: spacesLoading, error: spacesError } = useSpacesQuery(); const [selectedSpaceId, setSelectedSpaceId] = useState(''); const [query, setQuery] = useState(''); const [dark, setDark] = useState(true); const [adding, setAdding] = useState(false); const [spaceMenu, setSpaceMenu] = useState(false); const [creatingSpace, setCreatingSpace] = useState(false); const [view, setView] = useState<'items' | 'boxes' | 'locations'>('items'); const [statusFilter, setStatusFilter] = useState('all'); const [photoViewer, setPhotoViewer] = useState<{ src: string; alt: string } | null>(null); const [selected, setSelected] = useState<Entity | null>(null); const [logout] = useLogoutMutation(); const activeSpace = spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0]; const { data: itemList = [], isLoading: itemsLoading, error: itemsError } = useItemsQuery(activeSpace?.id ?? '', { skip: !activeSpace || Boolean(query) }); const { data: searchResults = [] } = useSearchQuery({ spaceId: activeSpace?.id ?? '', q: query }, { skip: !activeSpace || !query }); const { data: boxList = [] } = useBoxesQuery(activeSpace?.id ?? '', { skip: !activeSpace }); const { data: locationList = [] } = useLocationsQuery(activeSpace?.id ?? '', { skip: !activeSpace }); const items = query ? searchResults : itemList; const unfilteredRecords = view === 'items' ? items : view === 'boxes' ? boxList : locationList; const availableTags = [...new Map(items.flatMap((item) => item.tags ?? []).map((tag) => [tag.id, tag])).values()]; const [tagFilter, setTagFilter] = useState('all'); const records = unfilteredRecords.filter((record) => statusFilter === 'all' ? record.state !== 'deleted' : record.state === statusFilter)
-  if (spacesLoading) return <main className="auth-page"><p role="status">Загружаем пространства…</p></main>; if (spacesError) return <main className="auth-page"><p role="alert">{message(spacesError)}</p></main>; if (!activeSpace) return <main className={dark ? 'app dark' : 'app'}><aside><strong>storere</strong></aside><SpaceSetup /></main>
-  const title = view === 'items' ? 'Мои вещи' : view === 'boxes' ? 'Коробки' : 'Места'
-  return <main className={dark ? 'app dark' : 'app'}><aside><strong>storere</strong><nav><button className={view === 'items' ? 'active' : ''} onClick={() => setView('items')}><span className="nav-icon">⌕</span><span>Вещи</span></button><button className={view === 'boxes' ? 'active' : ''} onClick={() => setView('boxes')}><span className="nav-icon">▣</span><span>Коробки</span></button><button className={view === 'locations' ? 'active' : ''} onClick={() => setView('locations')}><span className="nav-icon">⌖</span><span>Места</span></button></nav><div className="account"><div className="space-menu"><button className="space-trigger" aria-expanded={spaceMenu} onClick={() => setSpaceMenu(!spaceMenu)}><span>Пространство</span><b>{activeSpace.name}</b><span aria-hidden="true">⌃</span></button>{spaceMenu && <div className="space-options" role="menu">{spaces.map((space) => <button role="menuitem" className={space.id === activeSpace.id ? 'active' : ''} key={space.id} onClick={() => { setSelectedSpaceId(space.id); setSpaceMenu(false) }}>{space.name}</button>)}<button role="menuitem" className="add-space" onClick={() => { setSpaceMenu(false); setCreatingSpace(true) }}>＋ Добавить пространство</button></div>}</div><span>{user.displayName} · @{user.username}</span><button className="link-button" onClick={() => logout()}>Выйти</button></div></aside><section className="content"><header><div><p className="eyebrow">{activeSpace.name.toUpperCase()}</p><h1>{title}</h1></div><div className="actions"><button aria-label="Переключить тему" onClick={() => setDark(!dark)}>{dark ? '☀' : '☾'}</button><button className="primary" onClick={() => setAdding(true)}>＋ Добавить</button></div></header>{view === 'items' && <label className="search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти вещь…" autoFocus /></label>}<div className="filters" aria-label="Фильтры"><label>Статус<select aria-label="Фильтр по статусу" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Все</option><option value="active">Активно</option><option value="temporarily_removed">Временно убрано</option><option value="archived">Архив</option><option value="deleted">Удалённые</option></select></label>{view === 'items' && <label>Флаг<select aria-label="Фильтр по флагу" value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}><option value="all">Все</option>{availableTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>}</div>{itemsError && <p role="alert" className="form-error">{message(itemsError)}</p>}<div className="summary"><span>{records.length} {view === 'items' ? 'вещи' : view === 'boxes' ? 'коробки' : 'места'}</span></div>{itemsLoading && view === 'items' ? <p role="status">Загружаем вещи…</p> : <div className="grid">{view === 'items' ? (records as Item[]).map((item) => <button className="entity-card" key={item.id} onClick={() => setSelected({ kind: 'item', value: item })}><div className="preview">{item.media?.[0] ? <><img src={item.media[0].url} alt="" /><span className="image-expand" role="button" tabIndex={0} aria-label="Открыть фото на весь экран" onClick={(event) => { event.stopPropagation(); setPhotoViewer({ src: item.media![0].url, alt: item.name }) }}>⤢</span></> : <span className="card-placeholder">▧</span>}<div className="card-icons"><span className="status-icon" title={stateMeta(item.state).label} aria-label={stateMeta(item.state).label}>{stateMeta(item.state).icon}</span>{item.tags?.map((tag) => <span key={tag.id} className="flag-icon" title={tag.name} aria-label={tag.name}>⚑</span>)}</div><span>{item.photoCount} фото</span></div><div className="card"><h2>{item.name}</h2><p>{item.description || 'Без описания'}</p></div></button>) : view === 'boxes' ? (boxList as Box[]).map((box) => <button className="entity-card" key={box.id} onClick={() => setSelected({ kind: 'box', value: box })}><div className="preview">□</div><div className="card"><h2>{box.name}</h2><p>{box.itemCount} вещей · {box.description || 'Без описания'}</p></div></button>) : (locationList as Location[]).map((location) => <button className="entity-card" key={location.id} onClick={() => setSelected({ kind: 'location', value: location })}><div className="preview">⌖</div><div className="card"><h2>{location.name}</h2><p>{location.description || location.code || 'Без описания'}</p></div></button>)}</div>}</section>
-      <button className="fab" aria-label="Быстрое создание" onClick={() => setAdding(true)}>＋</button>{adding && <AddDialog space={activeSpace} onClose={() => setAdding(false)} />}{selected && <EntityDialog entity={selected} locations={locationList} items={itemList} spaceId={activeSpace.id} onClose={() => setSelected(null)} />}{photoViewer && <PhotoViewer {...photoViewer} onClose={() => setPhotoViewer(null)} />}{creatingSpace && <CreateSpaceDialog onClose={() => setCreatingSpace(false)} />}</main>
+	const { data: spaces = [], isLoading: spacesLoading, error: spacesError } = useSpacesQuery()
+	const [selectedSpaceId, setSelectedSpaceId] = useState('')
+	const [query, setQuery] = useState('')
+	const [dark, setDark] = useState(true)
+	const [adding, setAdding] = useState(false)
+	const [spaceMenu, setSpaceMenu] = useState(false)
+	const [creatingSpace, setCreatingSpace] = useState(false)
+	const [view, setView] = useState<'items' | 'boxes' | 'locations'>('items')
+	const [statusFilter, setStatusFilter] = useState('all')
+	const [photoViewer, setPhotoViewer] = useState<{ src: string; alt: string } | null>(null)
+	const [selected, setSelected] = useState<Entity | null>(null)
+	const [logout] = useLogoutMutation()
+	const activeSpace = spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0]
+	const {
+		data: itemList = [],
+		isLoading: itemsLoading,
+		error: itemsError
+	} = useItemsQuery(activeSpace?.id ?? '', { skip: !activeSpace || Boolean(query) })
+	const { data: searchResults = [] } = useSearchQuery(
+		{ spaceId: activeSpace?.id ?? '', q: query },
+		{ skip: !activeSpace || !query }
+	)
+	const { data: boxList = [] } = useBoxesQuery(activeSpace?.id ?? '', { skip: !activeSpace })
+	const { data: locationList = [] } = useLocationsQuery(activeSpace?.id ?? '', {
+		skip: !activeSpace
+	})
+	const items = query ? searchResults : itemList
+	const unfilteredRecords = view === 'items' ? items : view === 'boxes' ? boxList : locationList
+	const availableTags = [
+		...new Map(items.flatMap((item) => item.tags ?? []).map((tag) => [tag.id, tag])).values()
+	]
+	const [tagFilter, setTagFilter] = useState('all')
+	const records = unfilteredRecords.filter((record) =>
+		statusFilter === 'all' ? record.state !== 'deleted' : record.state === statusFilter
+	)
+	if (spacesLoading)
+		return (
+			<main className="auth-page">
+				<p role="status">Загружаем пространства…</p>
+			</main>
+		)
+	if (spacesError)
+		return (
+			<main className="auth-page">
+				<p role="alert">{message(spacesError)}</p>
+			</main>
+		)
+	if (!activeSpace)
+		return (
+			<main className={dark ? 'app dark' : 'app'}>
+				<aside>
+					<strong>storere</strong>
+				</aside>
+				<SpaceSetup />
+			</main>
+		)
+	const title = view === 'items' ? 'Мои вещи' : view === 'boxes' ? 'Коробки' : 'Места'
+	return (
+		<main className={dark ? 'app dark' : 'app'}>
+			<aside>
+				<strong>storere</strong>
+				<nav>
+					<button className={view === 'items' ? 'active' : ''} onClick={() => setView('items')}>
+						<span className="nav-icon">⌕</span>
+						<span>Вещи</span>
+					</button>
+					<button className={view === 'boxes' ? 'active' : ''} onClick={() => setView('boxes')}>
+						<span className="nav-icon">▣</span>
+						<span>Коробки</span>
+					</button>
+					<button
+						className={view === 'locations' ? 'active' : ''}
+						onClick={() => setView('locations')}>
+						<span className="nav-icon">⌖</span>
+						<span>Места</span>
+					</button>
+				</nav>
+				<div className="account">
+					<div className="space-menu">
+						<button
+							className="space-trigger"
+							aria-expanded={spaceMenu}
+							onClick={() => setSpaceMenu(!spaceMenu)}>
+							<span>Пространство</span>
+							<b>{activeSpace.name}</b>
+							<span aria-hidden="true">⌃</span>
+						</button>
+						{spaceMenu && (
+							<div className="space-options" role="menu">
+								{spaces.map((space) => (
+									<button
+										role="menuitem"
+										className={space.id === activeSpace.id ? 'active' : ''}
+										key={space.id}
+										onClick={() => {
+											setSelectedSpaceId(space.id)
+											setSpaceMenu(false)
+										}}>
+										{space.name}
+									</button>
+								))}
+								<button
+									role="menuitem"
+									className="add-space"
+									onClick={() => {
+										setSpaceMenu(false)
+										setCreatingSpace(true)
+									}}>
+									＋ Добавить пространство
+								</button>
+							</div>
+						)}
+					</div>
+					<span>
+						{user.displayName} · @{user.username}
+					</span>
+					<button className="link-button" onClick={() => logout()}>
+						Выйти
+					</button>
+				</div>
+			</aside>
+			<section className="content">
+				<header>
+					<div>
+						<p className="eyebrow">{activeSpace.name.toUpperCase()}</p>
+						<h1>{title}</h1>
+					</div>
+					<div className="actions">
+						<button aria-label="Переключить тему" onClick={() => setDark(!dark)}>
+							{dark ? '☀' : '☾'}
+						</button>
+						<button className="primary" onClick={() => setAdding(true)}>
+							＋ Добавить
+						</button>
+					</div>
+				</header>
+				{view === 'items' && (
+					<label className="search">
+						<span>⌕</span>
+						<input
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							placeholder="Найти вещь…"
+							autoFocus
+						/>
+					</label>
+				)}
+				<div className="filters" aria-label="Фильтры">
+					<label>
+						Статус
+						<select
+							aria-label="Фильтр по статусу"
+							value={statusFilter}
+							onChange={(event) => setStatusFilter(event.target.value)}>
+							<option value="all">Все</option>
+							<option value="active">Активно</option>
+							<option value="temporarily_removed">Временно убрано</option>
+							<option value="archived">Архив</option>
+							<option value="deleted">Удалённые</option>
+						</select>
+					</label>
+					{view === 'items' && (
+						<label>
+							Флаг
+							<select
+								aria-label="Фильтр по флагу"
+								value={tagFilter}
+								onChange={(event) => setTagFilter(event.target.value)}>
+								<option value="all">Все</option>
+								{availableTags.map((tag) => (
+									<option key={tag.id} value={tag.id}>
+										{tag.name}
+									</option>
+								))}
+							</select>
+						</label>
+					)}
+				</div>
+				{itemsError && (
+					<p role="alert" className="form-error">
+						{message(itemsError)}
+					</p>
+				)}
+				<div className="summary">
+					<span>
+						{records.length} {view === 'items' ? 'вещи' : view === 'boxes' ? 'коробки' : 'места'}
+					</span>
+				</div>
+				{itemsLoading && view === 'items' ? (
+					<p role="status">Загружаем вещи…</p>
+				) : (
+					<div className="grid">
+						{view === 'items'
+							? (records as Item[]).map((item) => (
+									<button
+										className="entity-card"
+										key={item.id}
+										onClick={() => setSelected({ kind: 'item', value: item })}>
+										<div className="preview">
+											{item.media?.[0] ? (
+												<>
+													<img src={item.media[0].url} alt="" />
+													<span
+														className="image-expand"
+														role="button"
+														tabIndex={0}
+														aria-label="Открыть фото на весь экран"
+														onClick={(event) => {
+															event.stopPropagation()
+															setPhotoViewer({ src: item.media![0].url, alt: item.name })
+														}}>
+														⤢
+													</span>
+												</>
+											) : (
+												<span className="card-placeholder">▧</span>
+											)}
+											<div className="card-icons">
+												<span
+													className="status-icon"
+													title={stateMeta(item.state).label}
+													aria-label={stateMeta(item.state).label}>
+													{stateMeta(item.state).icon}
+												</span>
+												{item.tags?.map((tag) => (
+													<span
+														key={tag.id}
+														className="flag-icon"
+														title={tag.name}
+														aria-label={tag.name}>
+														⚑
+													</span>
+												))}
+											</div>
+											<span>{item.photoCount} фото</span>
+										</div>
+										<div className="card">
+											<h2>{item.name}</h2>
+											<p>{item.description || 'Без описания'}</p>
+										</div>
+									</button>
+								))
+							: view === 'boxes'
+								? (boxList as Box[]).map((box) => (
+										<button
+											className="entity-card"
+											key={box.id}
+											onClick={() => setSelected({ kind: 'box', value: box })}>
+											<div className="preview">□</div>
+											<div className="card">
+												<h2>{box.name}</h2>
+												<p>
+													{box.itemCount} вещей · {box.description || 'Без описания'}
+												</p>
+											</div>
+										</button>
+									))
+								: (locationList as Location[]).map((location) => (
+										<button
+											className="entity-card"
+											key={location.id}
+											onClick={() => setSelected({ kind: 'location', value: location })}>
+											<div className="preview">⌖</div>
+											<div className="card">
+												<h2>{location.name}</h2>
+												<p>{location.description || location.code || 'Без описания'}</p>
+											</div>
+										</button>
+									))}
+					</div>
+				)}
+			</section>
+			<button className="fab" aria-label="Быстрое создание" onClick={() => setAdding(true)}>
+				＋
+			</button>
+			{adding && <AddDialog space={activeSpace} onClose={() => setAdding(false)} />}
+			{selected && (
+				<EntityDialog
+					entity={selected}
+					locations={locationList}
+					items={itemList}
+					spaceId={activeSpace.id}
+					onClose={() => setSelected(null)}
+				/>
+			)}
+			{photoViewer && <PhotoViewer {...photoViewer} onClose={() => setPhotoViewer(null)} />}
+			{creatingSpace && <CreateSpaceDialog onClose={() => setCreatingSpace(false)} />}
+		</main>
+	)
 }
-export function App() { const session = useMeQuery(); if (session.isLoading) return <main className="auth-page"><p role="status">Проверяем сессию…</p></main>; return session.data ? <Inventory user={session.data} /> : <AuthPage /> }
+export function App() {
+	const session = useMeQuery()
+	if (session.isLoading)
+		return (
+			<main className="auth-page">
+				<p role="status">Проверяем сессию…</p>
+			</main>
+		)
+	return session.data ? <Inventory user={session.data} /> : <AuthPage />
+}

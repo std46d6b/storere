@@ -6,4 +6,10 @@ import { store } from './app/store'
 import './styles.css'
 import './auth.css'
 
-createRoot(document.getElementById('root')!).render(<StrictMode><Provider store={store}><App /></Provider></StrictMode>)
+createRoot(document.getElementById('root')!).render(
+	<StrictMode>
+		<Provider store={store}>
+			<App />
+		</Provider>
+	</StrictMode>
+)

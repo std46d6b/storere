@@ -1,23 +1,121 @@
 .auth-page {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  color: #f5f5ef;
-  background: radial-gradient(circle at 15% 12%, rgb(113 101 236 / 26%), transparent 30rem), radial-gradient(circle at 87% 88%, rgb(58 144 103 / 14%), transparent 25rem), #161714;
+	min-height: 100dvh;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	color: #f5f5ef;
+	background:
+		radial-gradient(circle at 15% 12%, rgb(113 101 236 / 26%), transparent 30rem),
+		radial-gradient(circle at 87% 88%, rgb(58 144 103 / 14%), transparent 25rem), #161714;
 }
-.auth-card, .setup { width: min(100%, 440px); padding: 34px; border: 1px solid #3a3c35; border-radius: 20px; background: rgb(32 33 30 / 94%); box-shadow: 0 24px 70px rgb(0 0 0 / 28%); }
-.brand { display: block; margin-bottom: 46px; color: #fff; font-size: 21px; letter-spacing: -.8px; }
-.auth-card h1, .setup h1 { margin: 0 0 10px; font-size: 31px; letter-spacing: -1.25px; }
-.auth-card form, .setup form, .dialog form { display: grid; gap: 15px; margin-top: 26px; }
-.auth-card label, .setup label, .dialog label { display: grid; gap: 7px; color: var(--ink-muted); font-size: 13px; font-weight: 700; }
-.auth-card input, .auth-card textarea, .auth-card select, .setup input, .setup textarea, .setup select, .dialog input, .dialog textarea, .dialog select { width: 100%; min-height: 44px; padding: 10px 11px; border: 1px solid var(--line-strong); border-radius: 9px; outline: 0; color: var(--ink); background: var(--surface); font: inherit; }
-.auth-card input, .auth-card textarea, .auth-card select { color: #f5f5ef; border-color: #43453f; background: #262724; }
-.auth-card textarea, .setup textarea, .dialog textarea { min-height: 84px; resize: vertical; }
-.auth-card input:focus, .auth-card textarea:focus, .auth-card select:focus, .setup input:focus, .setup textarea:focus, .setup select:focus, .dialog input:focus, .dialog textarea:focus, .dialog select:focus { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent); }
-.muted { color: var(--ink-muted); }
-.auth-page .muted { color: #afb0a8; }
-.wide { width: 100%; justify-content: center; text-align: center; }
-.form-error { margin: 0; color: #dd514b; font-size: 13px; }
+.auth-card,
+.setup {
+	width: min(100%, 440px);
+	padding: 34px;
+	border: 1px solid #3a3c35;
+	border-radius: 20px;
+	background: rgb(32 33 30 / 94%);
+	box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
+}
+.brand {
+	display: block;
+	margin-bottom: 46px;
+	color: #fff;
+	font-size: 21px;
+	letter-spacing: -0.8px;
+}
+.auth-card h1,
+.setup h1 {
+	margin: 0 0 10px;
+	font-size: 31px;
+	letter-spacing: -1.25px;
+}
+.auth-card form,
+.setup form,
+.dialog form {
+	display: grid;
+	gap: 15px;
+	margin-top: 26px;
+}
+.auth-card label,
+.setup label,
+.dialog label {
+	display: grid;
+	gap: 7px;
+	color: var(--ink-muted);
+	font-size: 13px;
+	font-weight: 700;
+}
+.auth-card input,
+.auth-card textarea,
+.auth-card select,
+.setup input,
+.setup textarea,
+.setup select,
+.dialog input,
+.dialog textarea,
+.dialog select {
+	width: 100%;
+	min-height: 44px;
+	padding: 10px 11px;
+	border: 1px solid var(--line-strong);
+	border-radius: 9px;
+	outline: 0;
+	color: var(--ink);
+	background: var(--surface);
+	font: inherit;
+}
+.auth-card input,
+.auth-card textarea,
+.auth-card select {
+	color: #f5f5ef;
+	border-color: #43453f;
+	background: #262724;
+}
+.auth-card textarea,
+.setup textarea,
+.dialog textarea {
+	min-height: 84px;
+	resize: vertical;
+}
+.auth-card input:focus,
+.auth-card textarea:focus,
+.auth-card select:focus,
+.setup input:focus,
+.setup textarea:focus,
+.setup select:focus,
+.dialog input:focus,
+.dialog textarea:focus,
+.dialog select:focus {
+	border-color: var(--focus);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+.muted {
+	color: var(--ink-muted);
+}
+.auth-page .muted {
+	color: #afb0a8;
+}
+.wide {
+	width: 100%;
+	justify-content: center;
+	text-align: center;
+}
+.form-error {
+	margin: 0;
+	color: #dd514b;
+	font-size: 13px;
+}
 
-@media (max-width: 700px) { .auth-page { padding: 16px; } .auth-card, .setup { padding: 26px 22px; } .brand { margin-bottom: 34px; } }
+@media (max-width: 700px) {
+	.auth-page {
+		padding: 16px;
+	}
+	.auth-card,
+	.setup {
+		padding: 26px 22px;
+	}
+	.brand {
+		margin-bottom: 34px;
+	}
+}
