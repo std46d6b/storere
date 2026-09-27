@@ -815,7 +815,9 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 										<div className="preview">
 											{item.media?.[0] ? (
 												<>
-													<img src={item.media[0].url} alt="" />
+													<div className="preview-image">
+														<img src={item.media[0].url} alt="" />
+													</div>
 													<span
 														className="image-expand"
 														role="button"
@@ -848,7 +850,7 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 													</span>
 												))}
 											</div>
-											<span>{item.photoCount} фото</span>
+											<span className="preview-photo-count">{item.photoCount} фото</span>
 										</div>
 										<div className="card">
 											<h2>{item.name}</h2>

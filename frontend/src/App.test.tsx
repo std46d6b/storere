@@ -134,6 +134,7 @@ describe('App', () => {
 		expect(screen.getByRole('button', { name: 'Выйти' }).previousElementSibling).toHaveTextContent(
 			'Misha · @misha'
 		)
+		expect((await screen.findByAltText('')).parentElement).toHaveClass('preview-image')
 		fireEvent.click(await screen.findByRole('button', { name: /паспорт/i }))
 		expect(await screen.findByRole('img', { name: 'Фото вещи: Паспорт' })).toHaveAttribute(
 			'src',

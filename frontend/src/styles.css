@@ -357,12 +357,17 @@ h2 {
 	overflow: hidden;
 	background: var(--surface-muted);
 }
-.preview img {
+.preview-image {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+}
+.preview-image img {
 	display: block;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	object-position: center center;
+	object-position: 50% 50%;
 }
 .card-placeholder {
 	display: grid;
@@ -379,7 +384,7 @@ h2 {
 	display: flex;
 	gap: 6px;
 }
-.preview > span:not(.image-expand):not(.card-placeholder) {
+.preview-photo-count {
 	position: absolute;
 	right: 10px;
 	bottom: 10px;
