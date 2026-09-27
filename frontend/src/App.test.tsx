@@ -75,11 +75,15 @@ describe('App', () => {
 	})
 
 	it('opens a box to show its contents, history, and settings', async () => {
-		const calls: { url: string; method: string }[] = []
+		const calls: { url: string; method: string; body?: unknown }[] = []
 		vi.stubGlobal(
 			'fetch',
 			vi.fn(async (request: Request) => {
-				calls.push({ url: request.url, method: request.method })
+				calls.push({
+					url: request.url,
+					method: request.method,
+					body: request.method === 'PATCH' ? await request.clone().json() : undefined
+				})
 				const url = new URL(request.url)
 				const json = (body: unknown, status = 200) =>
 					new Response(JSON.stringify(body), {
@@ -118,6 +122,8 @@ describe('App', () => {
 					return json([{ action: 'created', occurredAt: '2026-09-23T00:00:00Z' }])
 				if (url.pathname.endsWith('/boxes/box-1') && request.method === 'PATCH')
 					return new Response(null, { status: 204 })
+				if (url.pathname.endsWith('/items/item-1') && request.method === 'PATCH')
+					return new Response(null, { status: 204 })
 				if (url.pathname.endsWith('/boxes/box-1/move') && request.method === 'PATCH')
 					return new Response(null, { status: 204 })
 				return json({ code: 'not_found', message: 'Unexpected request' }, 404)
@@ -135,10 +141,25 @@ describe('App', () => {
 			'Misha · @misha'
 		)
 		expect((await screen.findByAltText('')).parentElement).toHaveClass('preview-image')
+		expect(screen.getByText('Архив', { selector: '.preview-photo-count' })).toBeInTheDocument()
 		fireEvent.click(await screen.findByRole('button', { name: /паспорт/i }))
 		const detailPhoto = await screen.findByRole('img', { name: 'Фото вещи: Паспорт' })
 		expect(detailPhoto).toHaveAttribute('src', '/api/v1/media/media-1')
 		expect(detailPhoto.parentElement?.parentElement).toHaveClass('item-detail-gallery')
+		fireEvent.click(screen.getByRole('tab', { name: /настройки/i }))
+		const itemBox = screen.getByRole('combobox', { name: 'Коробка' })
+		expect(itemBox).toHaveValue('box-1')
+		fireEvent.change(itemBox, { target: { value: '' } })
+		fireEvent.click(screen.getByRole('button', { name: 'Сохранить настройки' }))
+		await waitFor(() =>
+			expect(calls).toContainEqual(
+				expect.objectContaining({
+					method: 'PATCH',
+					url: expect.stringContaining('/items/item-1'),
+					body: expect.objectContaining({ boxId: '' })
+				})
+			)
+		)
 		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
 		fireEvent.click(screen.getByRole('button', { name: /коробки/i }))
 		await screen.findByRole('button', { name: /архив/i })

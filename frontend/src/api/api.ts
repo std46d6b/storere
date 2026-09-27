@@ -119,10 +119,10 @@ export const api = createApi({
 		}),
 		updateItem: build.mutation<
 			void,
-			{ id: string; name?: string; description?: string; state?: string }
+			{ id: string; name?: string; description?: string; state?: string; boxId?: string }
 		>({
 			query: ({ id, ...body }) => ({ url: `items/${id}`, method: 'PATCH', body }),
-			invalidatesTags: ['Item']
+			invalidatesTags: ['Item', 'Box']
 		}),
 		deleteItem: build.mutation<void, string>({
 			query: (id) => ({ url: `items/${id}`, method: 'DELETE' }),

@@ -685,7 +685,37 @@ func (s *server) createItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) patchItem(w http.ResponseWriter, r *http.Request) {
-	s.updateEntity(w, r, "items", "item", "itemID")
+	id, spaceID, ok := s.editableEntity(r, "items", "itemID")
+	if !ok {
+		fail(w, http.StatusNotFound, "not_found", "Resource not found")
+		return
+	}
+	if !s.can(r, spaceID, "editor") {
+		fail(w, http.StatusForbidden, "forbidden", "No edit access")
+		return
+	}
+	var in struct {
+		Name, Description, State *string
+		BoxID                    *string `json:"boxId"`
+	}
+	if !decode(r, &in) || (in.Name != nil && strings.TrimSpace(*in.Name) == "") {
+		fail(w, http.StatusBadRequest, "invalid_input", "Invalid update")
+		return
+	}
+	if in.BoxID != nil && *in.BoxID != "" {
+		var valid bool
+		if err := s.db.QueryRow(r.Context(), "select exists(select 1 from boxes where id=$1 and storage_space_id=$2 and deleted_at is null)", *in.BoxID, spaceID).Scan(&valid); err != nil || !valid {
+			fail(w, http.StatusBadRequest, "invalid_input", "Box does not belong to this space")
+			return
+		}
+	}
+	_, err := s.db.Exec(r.Context(), "update items set name=coalesce($1,name),description=coalesce($2,description),state=coalesce($3,state),box_id=case when $4::text is null then box_id else nullif($4,'')::uuid end,updated_at=now() where id=$5", in.Name, in.Description, in.State, in.BoxID, id)
+	if err != nil {
+		fail(w, http.StatusBadRequest, "update_failed", "Could not update resource")
+		return
+	}
+	s.audit(r, spaceID, "item", id, "updated", map[string]any{"name": in.Name, "description": in.Description, "state": in.State, "boxId": in.BoxID})
+	w.WriteHeader(http.StatusNoContent)
 }
 func (s *server) replaceItemMedia(w http.ResponseWriter, r *http.Request) {
 	id, spaceID, ok := s.editableEntity(r, "items", "itemID")

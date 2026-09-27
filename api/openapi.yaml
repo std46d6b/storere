@@ -69,6 +69,12 @@ paths:
     parameters: [{ name: spaceID, in: path, required: true, schema: { type: string, format: uuid } }]
     get: { security: [{ cookieAuth: [] }], responses: { '200': { description: Items, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Item' } } } } } } }
     post: { security: [{ cookieAuth: [] }], responses: { '201': { description: Created } } }
+  /items/{itemID}:
+    parameters: [{ name: itemID, in: path, required: true, schema: { type: string, format: uuid } }]
+    patch:
+      security: [{ cookieAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { name: { type: string }, description: { type: string }, state: { type: string }, boxId: { type: [string, 'null'], format: uuid } } } } } }
+      responses: { '204': { description: Updated }, '400': { description: Invalid input }, '403': { description: Forbidden }, '404': { description: Missing } }
   /media:
     post:
       security: [{ cookieAuth: [] }]

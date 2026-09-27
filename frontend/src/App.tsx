@@ -375,12 +375,14 @@ function AddDialog({ space, onClose }: { space: Space; onClose: () => void }) {
 
 function EntityDialog({
 	entity,
+	boxes,
 	locations,
 	items,
 	spaceId,
 	onClose
 }: {
 	entity: Entity
+	boxes: Box[]
 	locations: Location[]
 	items: Item[]
 	spaceId: string
@@ -418,7 +420,7 @@ function EntityDialog({
 			state: String(form.get('state'))
 		}
 		if (entity.kind === 'item') {
-			await updateItem({ id: current.id, ...body }).unwrap()
+			await updateItem({ id: current.id, ...body, boxId: String(form.get('boxId') || '') }).unwrap()
 			if (replacement) await replaceItemMedia({ id: current.id, mediaId: replacement.id }).unwrap()
 		}
 		if (entity.kind === 'location') await updateLocation({ id: current.id, ...body }).unwrap()
@@ -549,21 +551,34 @@ function EntityDialog({
 							</select>
 						</label>
 						{entity.kind === 'item' && (
-							<label>
-								Заменить фотографию
-								<input
-									aria-label="Заменить фотографию"
-									type="file"
-									accept="image/jpeg,image/png,image/gif,image/webp,image/heic,.heic"
-									onChange={async (event) => {
-										const file = event.currentTarget.files?.[0]
-										if (file) setReplacement(await uploadMedia({ spaceId, file }).unwrap())
-									}}
-								/>
-								{replacement && (
-									<img className="upload-preview" src={replacement.url} alt="Новая фотография" />
-								)}
-							</label>
+							<>
+								<label>
+									Коробка
+									<select name="boxId" defaultValue={(current as Item).boxId || ''}>
+										<option value="">Без коробки</option>
+										{boxes.map((box) => (
+											<option key={box.id} value={box.id}>
+												{box.name}
+											</option>
+										))}
+									</select>
+								</label>
+								<label>
+									Заменить фотографию
+									<input
+										aria-label="Заменить фотографию"
+										type="file"
+										accept="image/jpeg,image/png,image/gif,image/webp,image/heic,.heic"
+										onChange={async (event) => {
+											const file = event.currentTarget.files?.[0]
+											if (file) setReplacement(await uploadMedia({ spaceId, file }).unwrap())
+										}}
+									/>
+									{replacement && (
+										<img className="upload-preview" src={replacement.url} alt="Новая фотография" />
+									)}
+								</label>
+							</>
 						)}
 						{entity.kind === 'box' && (
 							<label>
@@ -862,7 +877,9 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 													</span>
 												))}
 											</div>
-											<span className="preview-photo-count">{item.photoCount} фото</span>
+											<span className="preview-photo-count">
+												{boxList.find((box) => box.id === item.boxId)?.name || 'Без коробки'}
+											</span>
 										</div>
 										<div className="card">
 											<h2>{item.name}</h2>
@@ -907,6 +924,7 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 			{selected && (
 				<EntityDialog
 					entity={selected}
+					boxes={boxList}
 					locations={locationList}
 					items={itemList}
 					spaceId={activeSpace.id}
