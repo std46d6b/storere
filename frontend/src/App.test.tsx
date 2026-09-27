@@ -105,6 +105,12 @@ describe('App', () => {
 							currentLocationId: 'location-1',
 							state: 'active',
 							itemCount: 1
+						},
+						{
+							id: 'box-2',
+							name: 'Инструменты',
+							state: 'active',
+							itemCount: 1
 						}
 					])
 				if (url.pathname.endsWith('/items'))
@@ -116,6 +122,19 @@ describe('App', () => {
 							state: 'active',
 							photoCount: 1,
 							media: [{ id: 'media-1', url: '/api/v1/media/media-1' }]
+						},
+						{
+							id: 'item-2',
+							name: 'Ключи',
+							boxId: 'box-2',
+							state: 'active',
+							photoCount: 0
+						},
+						{
+							id: 'item-3',
+							name: 'Запасной ключ',
+							state: 'active',
+							photoCount: 0
 						}
 					])
 				if (url.pathname.endsWith('/box/box-1/timeline'))
@@ -142,6 +161,18 @@ describe('App', () => {
 		)
 		expect((await screen.findByAltText('')).parentElement).toHaveClass('preview-image')
 		expect(screen.getByText('Архив', { selector: '.preview-photo-count' })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Фильтр по коробке: Все коробки' }))
+		fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск коробки' }), {
+			target: { value: 'инстру' }
+		})
+		fireEvent.click(screen.getByRole('option', { name: 'Инструменты' }))
+		expect(screen.queryByRole('button', { name: /паспорт/i })).not.toBeInTheDocument()
+		expect(screen.getByRole('button', { name: /ключи без описания/i })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Фильтр по коробке: Инструменты' }))
+		fireEvent.click(screen.getByRole('option', { name: 'Без коробки' }))
+		expect(screen.getByRole('button', { name: /запасной ключ без описания/i })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Фильтр по коробке: Без коробки' }))
+		fireEvent.click(screen.getByRole('option', { name: 'Все коробки' }))
 		fireEvent.click(await screen.findByRole('button', { name: /паспорт/i }))
 		const detailPhoto = await screen.findByRole('img', { name: 'Фото вещи: Паспорт' })
 		expect(detailPhoto).toHaveAttribute('src', '/api/v1/media/media-1')
@@ -161,7 +192,7 @@ describe('App', () => {
 			)
 		)
 		fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
-		fireEvent.click(screen.getByRole('button', { name: /коробки/i }))
+		fireEvent.click(screen.getByRole('button', { name: '▣ Коробки' }))
 		await screen.findByRole('button', { name: /архив/i })
 		fireEvent.click(screen.getByRole('button', { name: /архив/i }))
 

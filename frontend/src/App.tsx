@@ -640,6 +640,72 @@ function EntityDialog({
 	)
 }
 
+function BoxFilter({
+	boxes,
+	value,
+	onChange
+}: {
+	boxes: Box[]
+	value: string
+	onChange: (value: string) => void
+}) {
+	const [open, setOpen] = useState(false)
+	const [query, setQuery] = useState('')
+	const selected = boxes.find((box) => box.id === value)
+	const label = value === 'none' ? 'Без коробки' : selected?.name || 'Все коробки'
+	const options = boxes.filter((box) =>
+		box.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())
+	)
+	function select(next: string) {
+		onChange(next)
+		setQuery('')
+		setOpen(false)
+	}
+	return (
+		<div className="box-filter">
+			<span>Коробка</span>
+			<button
+				type="button"
+				className="box-filter-trigger"
+				aria-label={`Фильтр по коробке: ${label}`}
+				aria-expanded={open}
+				onClick={() => setOpen(!open)}>
+				{label}
+				<span aria-hidden="true">⌄</span>
+			</button>
+			{open && (
+				<div className="box-filter-popover" role="listbox" aria-label="Коробки">
+					<input
+						type="search"
+						role="searchbox"
+						aria-label="Поиск коробки"
+						value={query}
+						onChange={(event) => setQuery(event.target.value)}
+						onKeyDown={(event) => event.key === 'Escape' && setOpen(false)}
+						autoFocus
+					/>
+					<button role="option" aria-selected={value === 'all'} onClick={() => select('all')}>
+						Все коробки
+					</button>
+					<button role="option" aria-selected={value === 'none'} onClick={() => select('none')}>
+						Без коробки
+					</button>
+					{options.map((box) => (
+						<button
+							role="option"
+							aria-selected={value === box.id}
+							key={box.id}
+							onClick={() => select(box.id)}>
+							{box.name}
+						</button>
+					))}
+					{options.length === 0 && <p>Коробки не найдены.</p>}
+				</div>
+			)}
+		</div>
+	)
+}
+
 function Inventory({ user }: { user: { username: string; displayName: string } }) {
 	const { data: spaces = [], isLoading: spacesLoading, error: spacesError } = useSpacesQuery()
 	const [selectedSpaceId, setSelectedSpaceId] = useState('')
@@ -650,6 +716,7 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 	const [creatingSpace, setCreatingSpace] = useState(false)
 	const [view, setView] = useState<'items' | 'boxes' | 'locations'>('items')
 	const [statusFilter, setStatusFilter] = useState('all')
+	const [boxFilter, setBoxFilter] = useState('all')
 	const [photoViewer, setPhotoViewer] = useState<{ src: string; alt: string } | null>(null)
 	const [selected, setSelected] = useState<Entity | null>(null)
 	const [logout] = useLogoutMutation()
@@ -673,9 +740,13 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 		...new Map(items.flatMap((item) => item.tags ?? []).map((tag) => [tag.id, tag])).values()
 	]
 	const [tagFilter, setTagFilter] = useState('all')
-	const records = unfilteredRecords.filter((record) =>
-		statusFilter === 'all' ? record.state !== 'deleted' : record.state === statusFilter
-	)
+	const records = unfilteredRecords.filter((record) => {
+		if (!(statusFilter === 'all' ? record.state !== 'deleted' : record.state === statusFilter))
+			return false
+		if (view !== 'items' || boxFilter === 'all') return true
+		const item = record as Item
+		return boxFilter === 'none' ? !item.boxId : item.boxId === boxFilter
+	})
 	if (spacesLoading)
 		return (
 			<main className="auth-page">
@@ -802,6 +873,9 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 							<option value="deleted">Удалённые</option>
 						</select>
 					</label>
+					{view === 'items' && (
+						<BoxFilter boxes={boxList} value={boxFilter} onChange={setBoxFilter} />
+					)}
 					{view === 'items' && (
 						<label>
 							Флаг

@@ -330,6 +330,80 @@ h2 {
 	color: var(--ink);
 	background: var(--surface);
 }
+.box-filter {
+	position: relative;
+	display: grid;
+	gap: 5px;
+	color: var(--ink-muted);
+	font-size: 12px;
+	font-weight: 700;
+}
+.box-filter-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 18px;
+	min-width: 180px;
+	min-height: 38px;
+	padding: 7px 10px;
+	border: 1px solid var(--line-strong);
+	border-radius: 8px;
+	color: var(--ink);
+	background: var(--surface);
+	font: inherit;
+	font-weight: 600;
+	text-align: left;
+}
+.box-filter-trigger:focus-visible,
+.box-filter-popover input:focus-visible,
+.box-filter-popover button:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--focus) 32%, transparent);
+	outline-offset: 2px;
+}
+.box-filter-popover {
+	position: absolute;
+	z-index: 10;
+	top: calc(100% + 7px);
+	left: 0;
+	display: grid;
+	width: min(280px, calc(100vw - 48px));
+	max-height: 280px;
+	overflow: auto;
+	padding: 8px;
+	border: 1px solid var(--line-strong);
+	border-radius: 10px;
+	background: var(--surface);
+	box-shadow: var(--shadow-lg);
+	transform-origin: top left;
+}
+.box-filter-popover input {
+	min-height: 36px;
+	margin-bottom: 5px;
+	padding: 7px 9px;
+	border: 1px solid var(--line);
+	border-radius: 7px;
+	color: var(--ink);
+	background: var(--surface-muted);
+	font: inherit;
+}
+.box-filter-popover button {
+	min-height: 36px;
+	padding: 7px 9px;
+	border-radius: 7px;
+	color: var(--ink);
+	font: inherit;
+	font-weight: 600;
+	text-align: left;
+}
+.box-filter-popover button[aria-selected='true'],
+.box-filter-popover button:hover {
+	background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.box-filter-popover p {
+	margin: 8px;
+	color: var(--ink-muted);
+	font-size: 13px;
+}
 
 .grid {
 	display: grid;
