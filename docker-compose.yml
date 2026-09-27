@@ -33,7 +33,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-change-this-minio-password}
       MINIO_BUCKET: storere
       MINIO_USE_SSL: "false"
-      MAX_UPLOAD_BYTES: "15728640"
+      MAX_UPLOAD_BYTES: "1073741824"
     depends_on: { storere-migrate: { condition: service_completed_successfully } }
   web:
     build: { context: ., dockerfile: frontend/Dockerfile }

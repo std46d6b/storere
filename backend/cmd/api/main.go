@@ -50,7 +50,7 @@ type user struct {
 }
 
 func NewServer(db *pgxpool.Pool, registrationEnabled bool) http.Handler {
-	s := &server{db: db, registrationEnabled: registrationEnabled, secureCookies: os.Getenv("COOKIE_SECURE") != "false", mediaBucket: env("MINIO_BUCKET", "storere"), maxUploadBytes: envInt64("MAX_UPLOAD_BYTES", 15<<20)}
+	s := &server{db: db, registrationEnabled: registrationEnabled, secureCookies: os.Getenv("COOKIE_SECURE") != "false", mediaBucket: env("MINIO_BUCKET", "storere"), maxUploadBytes: envInt64("MAX_UPLOAD_BYTES", 1<<30)}
 	if endpoint := os.Getenv("MINIO_ENDPOINT"); endpoint != "" {
 		client, err := minio.New(endpoint, &minio.Options{Creds: credentials.NewStaticV4(os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), ""), Secure: os.Getenv("MINIO_USE_SSL") == "true"})
 		if err != nil {
