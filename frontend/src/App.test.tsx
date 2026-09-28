@@ -8,6 +8,7 @@ afterEach(() => {
 	cleanup()
 	vi.unstubAllGlobals()
 	store.dispatch({ type: 'api/resetApiState' })
+	window.history.replaceState({}, '', '/')
 })
 
 describe('App', () => {
@@ -267,6 +268,28 @@ describe('App', () => {
 			'src',
 			'/api/v1/media/media-1'
 		)
+		fireEvent.click(screen.getByRole('button', { name: /паспорт паспорт/i }))
+		expect(screen.getByRole('img', { name: 'Фото 1 вещи: Паспорт' })).toHaveAttribute(
+			'src',
+			'/api/v1/media/media-1'
+		)
+		fireEvent.keyDown(document, { key: 'Escape' })
+		expect(screen.getByRole('button', { name: 'Открыть коробку полностью' })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Открыть коробку полностью' }))
+		expect(window.location.pathname).toBe('/boxes/box-1')
+		expect(screen.getByRole('button', { name: 'Вернуться к коробкам' })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: /паспорт/i }))
+		expect(screen.getByRole('dialog', { name: 'Паспорт' })).toBeInTheDocument()
+		fireEvent.click(screen.getAllByRole('button', { name: 'Закрыть' }).at(-1)!)
+		fireEvent.click(screen.getByRole('button', { name: 'Добавить вещь в коробку' }))
+		expect(screen.getByRole('heading', { name: 'Новая вещь' })).toBeInTheDocument()
+		expect(screen.getByRole('combobox', { name: 'Коробка' })).toHaveValue('box-1')
+		fireEvent.keyDown(document, { key: 'Escape' })
+		expect(screen.queryByRole('heading', { name: 'Новая вещь' })).not.toBeInTheDocument()
+		expect(screen.getByRole('button', { name: 'Вернуться к коробкам' })).toBeInTheDocument()
+		fireEvent.click(screen.getByRole('button', { name: 'Вернуться к коробкам' }))
+		expect(window.location.pathname).toBe('/')
+		fireEvent.click(screen.getByRole('button', { name: /архив 1 вещей/i }))
 		fireEvent.click(screen.getByRole('button', { name: 'Развернуть карточку' }))
 		expect(screen.getByRole('dialog')).toHaveClass('expanded')
 		expect(screen.getByRole('button', { name: 'Сузить карточку' })).toBeInTheDocument()

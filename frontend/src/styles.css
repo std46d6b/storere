@@ -443,6 +443,27 @@ h2 {
 	object-fit: cover;
 	object-position: 50% 50%;
 }
+.box-preview {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	grid-template-rows: repeat(2, 1fr);
+	gap: 3px;
+	padding: 10px;
+}
+.box-preview img,
+.box-preview span {
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	object-fit: cover;
+	background: color-mix(in srgb, var(--surface) 72%, var(--line));
+}
+.box-preview span {
+	display: grid;
+	place-items: center;
+	color: var(--ink-muted);
+	font-size: 22px;
+}
 .card-placeholder {
 	display: grid;
 	place-items: center;
@@ -592,6 +613,60 @@ h2 {
 	width: auto;
 	padding: 0 8px;
 	font-size: 12px;
+}
+.add-box-item,
+.open-box-full {
+	position: absolute;
+	top: 14px;
+	display: grid;
+	place-items: center;
+	height: 36px;
+	padding: 0 8px;
+	color: var(--ink-muted);
+	font-size: 12px;
+}
+.add-box-item {
+	right: 52px;
+}
+.add-box-item + .resize-dialog {
+	right: 150px;
+}
+.open-box-full {
+	right: 262px;
+}
+.back-to-boxes {
+	position: absolute;
+	top: 14px;
+	left: 20px;
+	min-height: 36px;
+	padding: 0 8px;
+	font-size: 13px;
+}
+.box-full-backdrop {
+	z-index: 15;
+	padding: 0;
+	background: var(--surface);
+	backdrop-filter: none;
+}
+.box-full-page,
+.entity-dialog.box-full-page.expanded {
+	width: 100%;
+	max-width: none;
+	max-height: 100dvh;
+	height: 100dvh;
+	padding: 76px clamp(20px, 6vw, 96px) 40px;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+}
+.box-full-page .detail-panel {
+	max-width: 1120px;
+}
+.box-full-page .contents-list {
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.box-full-page .content-item {
+	min-height: 164px;
 }
 .choice {
 	display: flex;
@@ -767,6 +842,11 @@ h2 {
 .content-item {
 	display: grid;
 	gap: 8px;
+	width: 100%;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	text-align: left;
 }
 .content-item img,
 .content-item-placeholder {
@@ -1035,6 +1115,19 @@ button:active:not(:disabled) {
 		border-bottom: 0;
 		border-left: 0;
 		border-radius: 20px 20px 0 0;
+	}
+	.box-full-backdrop {
+		align-items: stretch;
+	}
+	.box-full-page,
+	.entity-dialog.box-full-page.expanded {
+		max-height: 100dvh;
+		height: 100dvh;
+		padding: 76px 16px calc(24px + env(safe-area-inset-bottom));
+		border-radius: 0;
+	}
+	.open-box-full {
+		right: 236px;
 	}
 	.photo-viewer {
 		inset: 8px;

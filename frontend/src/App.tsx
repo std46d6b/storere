@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useId, useState } from 'react'
 import {
 	ApiError,
 	Box,
@@ -222,10 +222,12 @@ function CreateSpaceDialog({ onClose }: { onClose: () => void }) {
 function AddDialog({
 	space,
 	initialKind,
+	initialBoxId,
 	onClose
 }: {
 	space: Space
 	initialKind: 'item' | 'box' | 'location'
+	initialBoxId?: string
 	onClose: () => void
 }) {
 	const [kind, setKind] = useState<'menu' | 'item' | 'box' | 'location'>(initialKind)
@@ -237,6 +239,15 @@ function AddDialog({
 	const { data: locations = [] } = useLocationsQuery(space.id)
 	const { data: boxes = [] } = useBoxesQuery(space.id)
 	const state = kind === 'item' ? itemState : kind === 'box' ? boxState : locationState
+	useEffect(() => {
+		function onKeyDown(event: KeyboardEvent) {
+			if (event.defaultPrevented || event.key !== 'Escape') return
+			event.preventDefault()
+			onClose()
+		}
+		window.addEventListener('keydown', onKeyDown)
+		return () => window.removeEventListener('keydown', onKeyDown)
+	}, [onClose])
 	async function upload(file?: File) {
 		if (file) setMedia(await uploadMedia({ spaceId: space.id, file }).unwrap())
 	}
@@ -341,7 +352,7 @@ function AddDialog({
 							<>
 								<label>
 									Коробка
-									<select name="boxId">
+									<select name="boxId" defaultValue={initialBoxId || ''}>
 										<option value="">Без коробки</option>
 										{boxes.map((box) => (
 											<option key={box.id} value={box.id}>
@@ -389,6 +400,11 @@ function EntityDialog({
 	locations,
 	items,
 	spaceId,
+	fullPage = false,
+	disableEscape = false,
+	onOpenItem,
+	onOpenFull,
+	onAddItem,
 	onClose
 }: {
 	entity: Entity
@@ -396,8 +412,14 @@ function EntityDialog({
 	locations: Location[]
 	items: Item[]
 	spaceId: string
+	fullPage?: boolean
+	disableEscape?: boolean
+	onOpenItem?: (item: Item) => void
+	onOpenFull?: () => void
+	onAddItem?: () => void
 	onClose: () => void
 }) {
+	const titleID = useId()
 	const [tab, setTab] = useState<'overview' | 'history' | 'settings'>('overview')
 	const [expanded, setExpanded] = useState(false)
 	const {
@@ -420,16 +442,19 @@ function EntityDialog({
 	const [gallery, setGallery] = useState<Media[]>(
 		entity.kind === 'item' ? (entity.value.media ?? []) : []
 	)
+	useEffect(() => {
+		setGallery(entity.kind === 'item' ? (entity.value.media ?? []) : [])
+	}, [entity.kind, entity.value.id])
 	const [mediaToDelete, setMediaToDelete] = useState<Media | null>(null)
 	useEffect(() => {
 		function onKeyDown(event: KeyboardEvent) {
-			if (event.defaultPrevented || event.key !== 'Escape') return
+			if (disableEscape || event.defaultPrevented || event.key !== 'Escape') return
 			if (mediaToDelete) setMediaToDelete(null)
 			else onClose()
 		}
 		window.addEventListener('keydown', onKeyDown)
 		return () => window.removeEventListener('keydown', onKeyDown)
-	}, [mediaToDelete, onClose])
+	}, [disableEscape, mediaToDelete, onClose])
 	const current = entity.value
 	const error = itemState.error || boxState.error || locationState.error || moveState.error
 	const saving =
@@ -477,24 +502,42 @@ function EntityDialog({
 		setMediaToDelete(null)
 	}
 	return (
-		<div className="backdrop" onMouseDown={onClose}>
+		<div className={fullPage ? 'backdrop box-full-backdrop' : 'backdrop'} onMouseDown={onClose}>
 			<section
-				className={`dialog entity-dialog${expanded ? ' expanded' : ''}`}
+				className={`dialog entity-dialog${expanded ? ' expanded' : ''}${fullPage ? ' box-full-page' : ''}`}
 				role="dialog"
 				aria-modal="true"
-				aria-labelledby="entity-title"
+				aria-labelledby={titleID}
 				onMouseDown={(event) => event.stopPropagation()}>
+				{fullPage && (
+					<button className="back-to-boxes" onClick={onClose} aria-label="Вернуться к коробкам">
+						← Коробки
+					</button>
+				)}
 				<button className="close" onClick={onClose} aria-label="Закрыть">
 					×
 				</button>
+				{entity.kind === 'box' && (
+					<button className="add-box-item" onClick={onAddItem} aria-label="Добавить вещь в коробку">
+						＋ Вещь
+					</button>
+				)}
 				<button
 					className="resize-dialog"
 					onClick={() => setExpanded(!expanded)}
 					aria-label={expanded ? 'Сузить карточку' : 'Развернуть карточку'}>
 					{expanded ? 'Сузить' : 'Развернуть'}
 				</button>
+				{entity.kind === 'box' && !fullPage && (
+					<button
+						className="open-box-full"
+						onClick={onOpenFull}
+						aria-label="Открыть коробку полностью">
+						Открыть полностью
+					</button>
+				)}
 				<p className="eyebrow">{kindLabel.toUpperCase()}</p>
-				<h2 id="entity-title">{current.name}</h2>
+				<h2 id={titleID}>{current.name}</h2>
 				<p className="muted">{current.description || 'Без описания'}</p>
 				<div className="tabs" role="tablist" aria-label={`${kindLabel} разделы`}>
 					<button role="tab" aria-selected={tab === 'overview'} onClick={() => setTab('overview')}>
@@ -513,16 +556,18 @@ function EntityDialog({
 							boxItems.length ? (
 								<ul className="contents-list">
 									{boxItems.map((item) => (
-										<li key={item.id} className="content-item">
-											{item.media?.[0] ? (
-												<img src={item.media[0].url} alt={item.name} />
-											) : (
-												<span className="content-item-placeholder">▧</span>
-											)}
-											<span>
-												<b>{item.name}</b>
-												<small>{item.description || 'Без описания'}</small>
-											</span>
+										<li key={item.id}>
+											<button className="content-item" onClick={() => onOpenItem?.(item)}>
+												{item.media?.[0] ? (
+													<img src={item.media[0].url} alt={item.name} />
+												) : (
+													<span className="content-item-placeholder">▧</span>
+												)}
+												<span>
+													<b>{item.name}</b>
+													<small>{item.description || 'Без описания'}</small>
+												</span>
+											</button>
 										</li>
 									))}
 								</ul>
@@ -822,7 +867,10 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 	const [selectedSpaceId, setSelectedSpaceId] = useState('')
 	const [query, setQuery] = useState('')
 	const [dark, setDark] = useState(true)
-	const [adding, setAdding] = useState(false)
+	const [adding, setAdding] = useState<{
+		kind: 'item' | 'box' | 'location'
+		boxId?: string
+	} | null>(null)
 	const [spaceMenu, setSpaceMenu] = useState(false)
 	const [creatingSpace, setCreatingSpace] = useState(false)
 	const [view, setView] = useState<'items' | 'boxes' | 'locations'>('items')
@@ -830,6 +878,10 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 	const [boxFilter, setBoxFilter] = useState('all')
 	const [photoViewer, setPhotoViewer] = useState<{ src: string; alt: string } | null>(null)
 	const [selected, setSelected] = useState<Entity | null>(null)
+	const [boxDialog, setBoxDialog] = useState<Box | null>(null)
+	const [fullBoxId, setFullBoxId] = useState(
+		() => window.location.pathname.match(/^\/boxes\/([^/]+)$/)?.[1] ?? ''
+	)
 	const [logout] = useLogoutMutation()
 	const activeSpace = spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0]
 	const searchQuery = query.trim()
@@ -837,7 +889,9 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 		data: itemList = [],
 		isLoading: itemsLoading,
 		error: itemsError
-	} = useItemsQuery(activeSpace?.id ?? '', { skip: !activeSpace || Boolean(searchQuery) })
+	} = useItemsQuery(activeSpace?.id ?? '', {
+		skip: !activeSpace || (view === 'items' && Boolean(searchQuery))
+	})
 	const { data: searchResults = [] } = useSearchQuery(
 		{ spaceId: activeSpace?.id ?? '', q: searchQuery },
 		{ skip: !activeSpace || !searchQuery }
@@ -846,7 +900,24 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 	const { data: locationList = [] } = useLocationsQuery(activeSpace?.id ?? '', {
 		skip: !activeSpace
 	})
-	const items = searchQuery ? searchResults : itemList
+	const items = view === 'items' && searchQuery ? searchResults : itemList
+	const fullBox = boxList.find((box) => box.id === fullBoxId)
+	useEffect(() => {
+		const onPopState = () =>
+			setFullBoxId(window.location.pathname.match(/^\/boxes\/([^/]+)$/)?.[1] ?? '')
+		window.addEventListener('popstate', onPopState)
+		return () => window.removeEventListener('popstate', onPopState)
+	}, [])
+	function openBoxFull(box: Box) {
+		window.history.pushState({}, '', `/boxes/${box.id}`)
+		setFullBoxId(box.id)
+		setSelected(null)
+		setBoxDialog(null)
+	}
+	function closeBoxFull() {
+		window.history.replaceState({}, '', '/')
+		setFullBoxId('')
+	}
 	const unfilteredRecords = view === 'items' ? items : view === 'boxes' ? boxList : locationList
 	const availableTags = [
 		...new Map(items.flatMap((item) => item.tags ?? []).map((tag) => [tag.id, tag])).values()
@@ -955,7 +1026,13 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 						<button aria-label="Переключить тему" onClick={() => setDark(!dark)}>
 							{dark ? '☀' : '☾'}
 						</button>
-						<button className="primary" onClick={() => setAdding(true)}>
+						<button
+							className="primary"
+							onClick={() =>
+								setAdding({
+									kind: view === 'items' ? 'item' : view === 'boxes' ? 'box' : 'location'
+								})
+							}>
 							＋ Добавить
 						</button>
 					</div>
@@ -1075,11 +1152,22 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 								))
 							: view === 'boxes'
 								? (boxList as Box[]).map((box) => (
-										<button
-											className="entity-card"
-											key={box.id}
-											onClick={() => setSelected({ kind: 'box', value: box })}>
-											<div className="preview">□</div>
+										<button className="entity-card" key={box.id} onClick={() => setBoxDialog(box)}>
+											<div className="preview box-preview">
+												{itemList
+													.filter((item) => item.boxId === box.id)
+													.slice(0, 6)
+													.map((item) =>
+														item.media?.[0] ? (
+															<img key={item.id} src={item.media[0].url} alt="" />
+														) : (
+															<span key={item.id} aria-label={item.name}>
+																▧
+															</span>
+														)
+													)}
+												{!itemList.some((item) => item.boxId === box.id) && <span>□</span>}
+											</div>
 											<div className="card">
 												<h2>{box.name}</h2>
 												<p>
@@ -1103,17 +1191,59 @@ function Inventory({ user }: { user: { username: string; displayName: string } }
 					</div>
 				)}
 			</section>
-			<button className="fab" aria-label="Быстрое создание" onClick={() => setAdding(true)}>
+			<button
+				className="fab"
+				aria-label="Быстрое создание"
+				onClick={() => setAdding({ kind: 'item' })}>
 				＋
 			</button>
 			{adding && (
 				<AddDialog
 					space={activeSpace}
-					initialKind={view === 'items' ? 'item' : view === 'boxes' ? 'box' : 'location'}
-					onClose={() => setAdding(false)}
+					initialKind={adding.kind}
+					initialBoxId={adding.boxId}
+					onClose={() => setAdding(null)}
 				/>
 			)}
-			{selected && (
+			{boxDialog && !fullBox && (
+				<EntityDialog
+					entity={{ kind: 'box', value: boxDialog }}
+					boxes={boxList}
+					locations={locationList}
+					items={itemList}
+					spaceId={activeSpace.id}
+					disableEscape={Boolean(selected || adding)}
+					onOpenItem={(item) => setSelected({ kind: 'item', value: item })}
+					onOpenFull={() => openBoxFull(boxDialog)}
+					onAddItem={() => setAdding({ kind: 'item', boxId: boxDialog.id })}
+					onClose={() => setBoxDialog(null)}
+				/>
+			)}
+			{selected && !fullBox && (
+				<EntityDialog
+					entity={selected}
+					boxes={boxList}
+					locations={locationList}
+					items={itemList}
+					spaceId={activeSpace.id}
+					onClose={() => setSelected(null)}
+				/>
+			)}
+			{fullBox && (
+				<EntityDialog
+					entity={{ kind: 'box', value: fullBox }}
+					boxes={boxList}
+					locations={locationList}
+					items={itemList}
+					spaceId={activeSpace.id}
+					fullPage
+					disableEscape={Boolean(selected || adding)}
+					onOpenItem={(item) => setSelected({ kind: 'item', value: item })}
+					onAddItem={() => setAdding({ kind: 'item', boxId: fullBox.id })}
+					onClose={closeBoxFull}
+				/>
+			)}
+			{selected?.kind === 'item' && fullBox && (
 				<EntityDialog
 					entity={selected}
 					boxes={boxList}
