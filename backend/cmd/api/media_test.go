@@ -75,6 +75,23 @@ func TestConvertImageToWebP(t *testing.T) {
 	}
 }
 
+func TestEncodeWebPVariants(t *testing.T) {
+	source := image.NewNRGBA(image.Rect(0, 0, 2, 2))
+	lossless, err := encodeWebP(source, true, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	optimized, err := encodeWebP(source, false, 75)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, data := range map[string][]byte{"lossless": lossless, "optimized": optimized} {
+		if got := http.DetectContentType(data); got != "image/webp" {
+			t.Fatalf("%s = %q, want image/webp", name, got)
+		}
+	}
+}
+
 func TestConvertImageToWebPPreservesJPEGOrientation(t *testing.T) {
 	var source bytes.Buffer
 	if err := jpeg.Encode(&source, image.NewNRGBA(image.Rect(0, 0, 2, 3)), nil); err != nil {
@@ -123,5 +140,12 @@ func TestMediaObjectKeysKeepTwoWebPFiles(t *testing.T) {
 	original, converted := mediaObjectKeys("space-1", "media-1", "image/webp")
 	if original != "spaces/space-1/media/media-1.original.webp" || converted != "spaces/space-1/media/media-1.webp" {
 		t.Fatalf("unexpected keys: %q, %q", original, converted)
+	}
+}
+
+func TestMediaVariantKeysKeepLosslessAndOptimizedFiles(t *testing.T) {
+	lossless, optimized := mediaVariantKeys("space-1", "media-1")
+	if lossless != "spaces/space-1/media/media-1.lossless.webp" || optimized != "spaces/space-1/media/media-1.webp" {
+		t.Fatalf("unexpected variant keys: %q, %q", lossless, optimized)
 	}
 }

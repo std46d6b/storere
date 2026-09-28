@@ -50,6 +50,10 @@ type user struct {
 }
 
 func NewServer(db *pgxpool.Pool, registrationEnabled bool) http.Handler {
+	return newServer(db, registrationEnabled).router()
+}
+
+func newServer(db *pgxpool.Pool, registrationEnabled bool) *server {
 	s := &server{db: db, registrationEnabled: registrationEnabled, secureCookies: os.Getenv("COOKIE_SECURE") != "false", mediaBucket: env("MINIO_BUCKET", "storere"), maxUploadBytes: envInt64("MAX_UPLOAD_BYTES", 1<<30)}
 	if endpoint := os.Getenv("MINIO_ENDPOINT"); endpoint != "" {
 		client, err := minio.New(endpoint, &minio.Options{Creds: credentials.NewStaticV4(os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), ""), Secure: os.Getenv("MINIO_USE_SSL") == "true"})
@@ -59,7 +63,7 @@ func NewServer(db *pgxpool.Pool, registrationEnabled bool) http.Handler {
 			s.minio = client
 		}
 	}
-	return s.router()
+	return s
 }
 
 func (s *server) router() http.Handler {
@@ -115,7 +119,9 @@ func main() {
 		addr = ":8080"
 	}
 	slog.Info("listening", "addr", addr)
-	if err := http.ListenAndServe(addr, NewServer(db, enabled)); err != nil {
+	s := newServer(db, enabled)
+	go s.runMediaWorker(context.Background())
+	if err := http.ListenAndServe(addr, s.router()); err != nil {
 		slog.Error("server", "error", err)
 	}
 }
@@ -158,8 +164,7 @@ func (s *server) uploadMedia(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusBadRequest, "invalid_image", "Only JPEG, PNG, GIF, WebP and HEIC images are allowed")
 		return
 	}
-	converted, err := convertImageToWebP(body)
-	if err != nil {
+	if _, err := decodeUploadImage(body); err != nil {
 		fail(w, http.StatusBadRequest, "invalid_image", "Photo could not be decoded")
 		return
 	}
@@ -168,24 +173,24 @@ func (s *server) uploadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mediaID := uuid.NewString()
-	originalKey, objectKey := mediaObjectKeys(spaceID, mediaID, contentType)
+	originalKey, _ := mediaObjectKeys(spaceID, mediaID, contentType)
 	if _, err := s.minio.PutObject(r.Context(), s.mediaBucket, originalKey, bytes.NewReader(body), int64(len(body)), minio.PutObjectOptions{ContentType: contentType}); err != nil {
 		fail(w, http.StatusServiceUnavailable, "media_unavailable", "Could not store photo")
 		return
 	}
-	if _, err := s.minio.PutObject(r.Context(), s.mediaBucket, objectKey, bytes.NewReader(converted), int64(len(converted)), minio.PutObjectOptions{ContentType: "image/webp"}); err != nil {
-		_ = s.minio.RemoveObject(r.Context(), s.mediaBucket, originalKey, minio.RemoveObjectOptions{})
-		fail(w, http.StatusServiceUnavailable, "media_unavailable", "Could not store photo")
-		return
-	}
-	if _, err := s.db.Exec(r.Context(), "insert into media(id,storage_space_id,object_key,mime_type,byte_size,created_by) values($1,$2,$3,$4,$5,$6)", mediaID, spaceID, objectKey, "image/webp", len(converted), current(r).ID); err != nil {
-		_ = s.minio.RemoveObject(r.Context(), s.mediaBucket, objectKey, minio.RemoveObjectOptions{})
+	if _, err := s.db.Exec(r.Context(), "insert into media(id,storage_space_id,object_key,mime_type,byte_size,created_by) values($1,$2,$3,$4,$5,$6)", mediaID, spaceID, originalKey, contentType, len(body), current(r).ID); err != nil {
 		_ = s.minio.RemoveObject(r.Context(), s.mediaBucket, originalKey, minio.RemoveObjectOptions{})
 		fail(w, http.StatusBadRequest, "create_failed", "Could not save photo metadata")
 		return
 	}
-	s.audit(r, spaceID, "media", mediaID, "uploaded", map[string]string{"contentType": contentType, "convertedContentType": "image/webp"})
-	respond(w, http.StatusCreated, map[string]any{"id": mediaID, "contentType": "image/webp", "byteSize": len(converted), "url": "/api/v1/media/" + mediaID})
+	if _, err := s.db.Exec(r.Context(), "insert into media_conversion_jobs(media_id,source_object_key) values($1,$2)", mediaID, originalKey); err != nil {
+		_, _ = s.db.Exec(r.Context(), "delete from media where id=$1", mediaID)
+		_ = s.minio.RemoveObject(r.Context(), s.mediaBucket, originalKey, minio.RemoveObjectOptions{})
+		fail(w, http.StatusServiceUnavailable, "media_unavailable", "Could not queue photo conversion")
+		return
+	}
+	s.audit(r, spaceID, "media", mediaID, "uploaded", map[string]string{"contentType": contentType, "conversion": "queued"})
+	respond(w, http.StatusCreated, map[string]any{"id": mediaID, "contentType": contentType, "byteSize": len(body), "url": "/api/v1/media/" + mediaID})
 }
 func (s *server) getMedia(w http.ResponseWriter, r *http.Request) {
 	if s.minio == nil {
@@ -271,6 +276,14 @@ func isHEIC(data []byte) bool {
 }
 
 func convertImageToWebP(data []byte) ([]byte, error) {
+	decoded, err := decodeUploadImage(data)
+	if err != nil {
+		return nil, err
+	}
+	return encodeWebP(decoded, false, 85)
+}
+
+func decodeUploadImage(data []byte) (image.Image, error) {
 	var decoded image.Image
 	var err error
 	if isHEIC(data) {
@@ -284,8 +297,12 @@ func convertImageToWebP(data []byte) ([]byte, error) {
 	if !isHEIC(data) {
 		decoded = applyEXIFOrientation(decoded, jpegEXIFOrientation(data))
 	}
+	return decoded, nil
+}
+
+func encodeWebP(decoded image.Image, lossless bool, quality int) ([]byte, error) {
 	var output bytes.Buffer
-	if err := webp.Encode(&output, decoded, &webp.Options{Quality: 85}); err != nil {
+	if err := webp.Encode(&output, decoded, &webp.Options{Lossless: lossless, Quality: quality}); err != nil {
 		return nil, err
 	}
 	return output.Bytes(), nil
